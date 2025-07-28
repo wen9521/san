@@ -9,7 +9,7 @@ export function DroppableRow({ id, label, cards, selectedCardIds, onCardClick })
     const { setNodeRef } = useDroppable({ id });
 
     return (
-        <SortableContext id={id} items={cards} strategy={horizontalListSortingStrategy}>
+        <SortableContext id={id} items={cards.map(c => c.id)} strategy={horizontalListSortingStrategy}>
             <Box ref={setNodeRef} className="game-row-new">
                 <Box className="card-container">
                     {cards.map(card => (
@@ -17,7 +17,7 @@ export function DroppableRow({ id, label, cards, selectedCardIds, onCardClick })
                             key={card.id}
                             card={card}
                             isSelected={selectedCardIds.includes(card.id)}
-                            onClick={() => onCardClick(card.id)}
+                            onClick={(e) => onCardClick(card.id, id, e)} // 传递事件对象e
                         />
                     ))}
                 </Box>

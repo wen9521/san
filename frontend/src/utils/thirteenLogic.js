@@ -112,3 +112,22 @@ export const calculateAllScores = (players) => {
 
     return playerDetails;
 };
+// ... (所有旧代码保持不变，只在末尾增加一个函数)
+
+// --- 文件顶部所有函数 sortCardsByRank, getHandDetails, calculateAllScores 等保持不变 ---
+
+/**
+ * 新增辅助函数：从所有牌墩中找到一张牌
+ * @param {Object} rows - 包含 front, middle, back 的对象
+ * @param {string} cardId - 要查找的卡牌ID
+ * @returns {Object|null} 找到的卡牌对象或null
+ */
+export const findCardInRows = (rows, cardId) => {
+    for (const rowId in rows) {
+        const card = rows[rowId].find(c => c.id === cardId);
+        if (card) {
+            return card;
+        }
+    }
+    return null;
+};

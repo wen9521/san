@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">扑克游戏</string>
-    <string name="title_activity_main">扑克游戏</string>
-    <string name="package_name">com.example.pokergame</string>
-    <string name="custom_url_scheme">com.example.pokergame</string>
+    <string name="app_name">扑克王</string>
+    <string name="title_activity_main">扑克王</string>
+    <string name="package_name">com.wen9521.thirteenpoker</string>
+    <string name="custom_url_scheme">com.wen9521.thirteenpoker</string>
 </resources>

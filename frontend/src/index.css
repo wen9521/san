@@ -5,5 +5,8 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: #1a3a1a; /* 深绿色背景，像牌桌 */
+  
+  /* 添加一个深邃的渐变背景 */
+  background: linear-gradient(135deg, #1d2b4a, #1a3a1a);
+  background-attachment: fixed; /* 固定背景，滚动时不移动 */
 }

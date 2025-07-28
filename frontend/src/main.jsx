@@ -3,30 +3,31 @@ import ReactDOM from 'react-dom/client'
 import App from './App.jsx'
 import './index.css'
 import { CssBaseline, ThemeProvider, createTheme } from '@mui/material';
+import { BrowserRouter } from 'react-router-dom';
 
-// 创建一个暗色主题
 const darkTheme = createTheme({
   palette: {
     mode: 'dark',
     background: {
-      default: '#1a3a1a',
+      default: 'transparent', // 让我们的body背景透出来
       paper: '#2a4a2a',
     },
     primary: {
-      main: '#ffab40', // 琥珀色
+      main: '#ffab40', 
     },
     secondary: {
-      main: '#e0e0e0', // 灰色
+      main: '#e0e0e0',
     },
   },
 });
-
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <ThemeProvider theme={darkTheme}>
       <CssBaseline />
-      <App />
+      <BrowserRouter>
+        <App />
+      </BrowserRouter>
     </ThemeProvider>
   </React.StrictMode>,
 )

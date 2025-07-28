@@ -3,15 +3,15 @@
 
 // 允许来自你的前端域名的跨域请求
 header("Access-Control-Allow-Origin: https://gewe.dpdns.org"); 
-// 在开发环境中，你可能需要允许来自本地服务器的请求，例如 http://localhost:5173
-// header("Access-Control-Allow-Origin: http://localhost:5173"); 
 
 // 允许的HTTP方法
 header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
+// 允许前端发送的请求头
+header("Access-Control-Allow-Headers: Content-Type, Authorization");
 // 响应类型为JSON
 header("Content-Type: application/json; charset=UTF-8");
 
-// 处理OPTIONS预检请求
+// 处理CORS预检请求 (OPTIONS method)
 if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
     exit(0);
 }
@@ -31,10 +31,10 @@ $suit_map = [
 ];
 $rank_map = [
     'ace' => 'A', '2' => '2', '3' => '3', '4' => '4', '5' => '5', '6' => '6', '7' => '7',
-    '8' => '8', '9' => '9', '10' => '10', 'jack' => 'J', 'queen' => 'Q', 'king' => 'K'
+    '8' => '8', '9' => '9', '10', 'jack' => 'J', 'queen' => 'Q', 'king' => 'K'
 ];
 
-// 创建一副完整的扑克牌
+// 创建一副标准的52张扑克牌
 $deck = [];
 foreach ($suits as $suit) {
     foreach ($ranks as $rank) {
@@ -47,11 +47,8 @@ foreach ($suits as $suit) {
     }
 }
 
-// 可选：添加大小王
-// 注意：标准十三张不使用大小王，但根据你的要求添加
-$deck[] = ['id' => 'red_joker', 'suit' => 'joker', 'rank' => 'red', 'displayName' => '大王'];
-$deck[] = ['id' => 'black_joker', 'suit' => 'joker', 'rank' => 'black', 'displayName' => '小王'];
-
+// 【重要修改】: 添加大小王的代码已被移除。
+// 现在牌组中只有52张牌，符合十三张游戏规则。
 
 // 洗牌
 shuffle($deck);
@@ -66,5 +63,4 @@ echo json_encode([
     'hand' => $hand,
     'dealt_at' => date('Y-m-d H:i:s')
 ]);
-
 ?>

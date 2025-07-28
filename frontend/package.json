@@ -1,15 +1,17 @@
 {
   "name": "thirteen-poker-frontend",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "resources": "capacitor-assets generate --iconPath ../assets/icon.png --splashPath ../assets --android"
   },
   "dependencies": {
-    "@capacitor/android": "^7.4.2",
+    "@capacitor/android": "^6.1.0",
+    "@capacitor/core": "^6.1.0",
     "@dnd-kit/core": "^6.1.0",
     "@dnd-kit/modifiers": "^7.0.0",
     "@dnd-kit/sortable": "^8.0.0",
@@ -22,8 +24,8 @@
     "react-router-dom": "^6.23.1"
   },
   "devDependencies": {
-    "@capacitor/cli": "^7.4.2",
-    "@capacitor/core": "^7.4.2",
+    "@capacitor/assets": "^3.0.5",
+    "@capacitor/cli": "^6.1.0",
     "@types/react": "^18.2.66",
     "@types/react-dom": "^18.2.22",
     "@vitejs/plugin-react": "^4.2.1",

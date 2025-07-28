@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "resources": "capacitor-assets generate --iconPath ../assets/icon.png --splashPath ../assets --android"
+    "resources": "capacitor-assets generate --asset-path ../assets --android"
   },
   "dependencies": {
     "@capacitor/android": "^6.1.0",

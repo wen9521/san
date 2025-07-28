@@ -1,0 +1,15 @@
+<IfModule mod_headers.c>
+    # 确保对所有来自你前端域名的请求都设置CORS头
+    SetEnvIf Origin "^https?://(gewe\.dpdns\.org|localhost:5173)$" AccessControlAllowOrigin=$0
+    Header set Access-Control-Allow-Origin %{AccessControlAllowOrigin}e env=AccessControlAllowOrigin
+    Header set Access-Control-Allow-Methods "GET, POST, OPTIONS"
+    Header set Access-Control-Allow-Headers "Content-Type, Authorization"
+</IfModule>
+
+# 可选：美化URL，例如将 /api/deal 映射到 /api/deal.php
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{REQUEST_FILENAME}\.php -f
+    RewriteRule ^(.*)$ $1.php [L]
+</IfModule>

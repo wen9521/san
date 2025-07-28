@@ -1,5 +1,5 @@
 import React, { createContext, useState, useContext } from 'react';
-import { getAIBestArrangement, sortCardsByRank } from '../utils/thirteenLogic';
+import { getAIBestArrangement, calculateAllScores, sortCardsByRank } from '../utils/thirteenLogic';
 
 const GameContext = createContext();
 
@@ -11,7 +11,10 @@ export const GameProvider = ({ children }) => {
     const [comparisonResult, setComparisonResult] = useState(null);
 
     const startGame = (allCards) => {
-        if (allCards.length !== 52) return;
+        if (allCards.length !== 52) {
+            console.error("需要52张牌来开始四人游戏");
+            return;
+        }
 
         const playerHands = [
             allCards.slice(0, 13),
@@ -20,11 +23,10 @@ export const GameProvider = ({ children }) => {
             allCards.slice(39, 52),
         ];
 
-        // 玩家的牌直接放入三道
         const playerInitialRows = {
-            front: playerHands[0].slice(0, 3),
-            middle: playerHands[0].slice(3, 8),
-            back: playerHands[0].slice(8, 13),
+            front: sortCardsByRank(playerHands[0].slice(0, 3)),
+            middle: sortCardsByRank(playerHands[0].slice(3, 8)),
+            back: sortCardsByRank(playerHands[0].slice(8, 13)),
         };
         
         const initialPlayers = [
@@ -39,32 +41,45 @@ export const GameProvider = ({ children }) => {
         setComparisonResult(null);
     };
     
-    // 更新玩家的牌墩
     const updatePlayerRows = (newRows) => {
          setPlayers(prev => prev.map(p => 
             p.id === 'player' ? { ...p, rows: newRows } : p
         ));
     };
 
-    // 智能分牌
     const autoArrangePlayerHand = () => {
         setPlayers(prev => {
             const player = prev.find(p => p.id === 'player');
             if (player) {
                 const bestRows = getAIBestArrangement(player.hand);
-                return prev.map(p => p.id === 'player' ? { ...p, rows: bestRows } : p);
+                // 确保智能分牌后取消玩家的准备状态，因为牌已变动
+                return prev.map(p => p.id === 'player' ? { ...p, rows: bestRows, isReady: false } : p);
             }
             return prev;
         });
     };
 
+    // setPlayerReady现在返回更新后的players数组
     const setPlayerReady = () => {
-        setPlayers(prev => prev.map(p => 
-            p.id === 'player' ? { ...p, isReady: true } : p
-        ));
+        let updatedPlayers = [];
+        setPlayers(prev => {
+            updatedPlayers = prev.map(p => 
+                p.id === 'player' ? { ...p, isReady: true } : p
+            );
+            return updatedPlayers;
+        });
+        return updatedPlayers; // 返回值，用于同步计算
     };
-
-    // ... (calculateResults 保持不变) ...
+    
+    // calculateResults现在接收players作为参数，避免异步问题
+    const calculateResults = (currentPlayers) => {
+        if (currentPlayers.every(p => p.isReady)) {
+            const results = calculateAllScores(currentPlayers);
+            setComparisonResult(results); // 更新全局状态
+            return true;
+        }
+        return false;
+    };
 
     const value = {
         players,
@@ -74,6 +89,7 @@ export const GameProvider = ({ children }) => {
         updatePlayerRows,
         autoArrangePlayerHand,
         setPlayerReady,
+        calculateResults,
     };
 
     return <GameContext.Provider value={value}>{children}</GameContext.Provider>;

@@ -1,0 +1,6 @@
+{
+  "appId": "com.example.pokergame",
+  "appName": "扑克游戏",
+  "webDir": "frontend/dist",
+  "bundledWebRuntime": false
+}

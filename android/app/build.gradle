@@ -1,23 +1,22 @@
+// 【核心修正】: 在文件顶部应用 variables.gradle 文件，以加载所有版本变量
+apply from: "../variables.gradle"
+
 apply plugin: 'com.android.application'
 
-// 【第一步】: 在文件顶部定义一个变量来存储密钥库文件
 def keystoreFile = file('my-release-key.keystore')
 
 android {
     namespace "com.wen9521.thirteenpoker"
     compileSdk rootProject.ext.compileSdkVersion
 
-    // 【第二步】: 在android代码块的顶层添加 signingConfigs
     signingConfigs {
         release {
-            // 只有在GitHub Actions环境中（即环境变量存在时）才配置签名
             if (System.getenv("SIGNING_STORE_PASSWORD") != null && keystoreFile.exists()) {
                 storeFile keystoreFile
                 storePassword System.getenv("SIGNING_STORE_PASSWORD")
                 keyAlias System.getenv("SIGNING_KEY_ALIAS")
                 keyPassword System.getenv("SIGNING_KEY_PASSWORD")
             }
-            // 明确启用v1和v2签名方案以保证最大兼容性
             v1SigningEnabled true
             v2SigningEnabled true
         }
@@ -39,16 +38,9 @@ android {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
-            // 【第三步】: 告诉release构建类型使用我们上面定义的签名配置
             signingConfig signingConfigs.release
         }
     }
-    
-    // compileOptions 和其他配置可以放在这里，如果需要的话
-    // compileOptions {
-    //     sourceCompatibility JavaVersion.VERSION_1_8
-    //     targetCompatibility JavaVersion.VERSION_1_8
-    // }
 }
 
 repositories {
@@ -59,8 +51,9 @@ repositories {
 
 dependencies {
     implementation fileTree(include: ['*.jar'], dir: 'libs')
+    // 现在，所有的 $...Version 变量都可以被正确找到了
     implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
-    implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorlayoutVersion"
+    implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
     implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
     implementation project(':capacitor-android')
     testImplementation "junit:junit:$junitVersion"

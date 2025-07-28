@@ -1,124 +1,183 @@
 import React, { useState, useEffect } from 'react';
-import { Button, Container, Typography, CircularProgress, Box, Stack, Chip, ButtonGroup } from '@mui/material';
-import CasinoIcon from '@mui/icons-material/Casino';
-import ReplayIcon from '@mui/icons-material/Replay';
-import SortByAlphaIcon from '@mui/icons-material/SortByAlpha';
-import StyleIcon from '@mui/icons-material/Style';
+import { Button, Container, Typography, Box, Stack } from '@mui/material';
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { arrayMove } from '@dnd-kit/sortable';
 import { useNavigate } from 'react-router-dom';
+
 import { useGame } from '../context/GameContext';
-import HandDisplay from '../components/HandDisplay';
-import GameRows from '../components/GameRows';
-import { sortCardsByRank, sortCardsBySuit, validateArrangement } from '../utils/thirteenLogic';
+import PlayerStatus from '../components/PlayerStatus';
+import { DroppableRow } from '../components/DroppableRow';
+import { validateArrangement } from '../utils/thirteenLogic';
 import '../styles/App.css';
 
+// ... (API_URL 和其他常量) ...
 const API_URL = 'https://9525.ip-ddns.com/api/deal.php';
-const INITIAL_ROWS = { front: [], middle: [], back: [] };
 
 function ThirteenGamePage() {
     const navigate = useNavigate();
-    const { startGame, setPlayerReady, calculateResults } = useGame();
+    const { players, startGame, isGameActive, updatePlayerRows, autoArrangePlayerHand, setPlayerReady } = useGame();
     
-    const [initialHand, setInitialHand] = useState([]);
-    const [unassignedHand, setUnassignedHand] = useState([]);
-    const [rows, setRows] = useState(INITIAL_ROWS);
-    const [selectedCardId, setSelectedCardId] = useState(null);
+    const player = players.find(p => p.id === 'player');
+    const [rows, setRows] = useState(player?.rows || { front: [], middle: [], back: [] });
+    const [selectedCardIds, setSelectedCardIds] = useState([]);
     const [validationResult, setValidationResult] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState(null);
 
     useEffect(() => {
-        if (unassignedHand.length === 0 && initialHand.length > 0) {
-            setValidationResult(validateArrangement(rows));
-        } else {
-            setValidationResult(null);
+        if (player) {
+            setRows(player.rows);
+            setValidationResult(validateArrangement(player.rows));
         }
-    }, [rows, unassignedHand, initialHand]);
+    }, [players]);
+
+    const sensors = useSensors(useSensor(PointerSensor), useSensor(KeyboardSensor));
 
     const handleDealCards = async () => {
         setIsLoading(true);
-        setError(null);
         try {
             const response = await fetch(API_URL);
-            if (!response.ok) throw new Error('API请求失败');
             const data = await response.json();
             if (data.success && data.hand.length === 52) {
-                startGame(data.hand); // 使用Context启动游戏
-                setInitialHand(sortCardsByRank(data.hand.slice(0, 13)));
-                setUnassignedHand(sortCardsByRank(data.hand.slice(0, 13)));
-                setRows(INITIAL_ROWS);
+                startGame(data.hand);
             } else {
-                throw new Error('获取的牌数不足52张');
+                 // Handle error or unexpected response
+                 console.error("Failed to deal cards or received unexpected data:", data);
+                 alert("发牌失败，请稍后再试。"); // Provide user feedback
             }
-        } catch (e) {
-            setError(e.message || '发牌失败，请检查网络和后端');
+        } catch (error) {
+            console.error("Error fetching cards:", error);
+            alert("发牌过程中发生错误，请检查网络连接。"); // Provide user feedback
         } finally {
             setIsLoading(false);
         }
     };
     
-    const handleConfirm = () => {
-        if (validationResult?.isValid) {
-            setPlayerReady(rows);
-            // 等待state更新后再计算和导航
-            setTimeout(() => {
-                if (calculateResults()) {
-                    navigate('/comparison');
-                }
-            }, 100);
-        } else if (initialHand.length === 0) {
-            // 如果还没有发牌就点击了确认按钮，可以给用户一个提示
-            // 例如：setError("请先开始牌局发牌");
-            console.log("请先开始牌局发牌");
+    const findContainer = (id) => {
+        if (Object.keys(rows).find(key => rows[key].find(card => card.id === id))) {
+            return Object.keys(rows).find(key => rows[key].find(card => card.id === id));
         }
-    };
-    
-    // ... 其他函数 (handleResetArrangement, handleSortHand, handleCardClick, handleRowClick, handleCardReturn) 与之前版本保持一致 ...
-    const handleResetArrangement = () => { setUnassignedHand(initialHand); setRows(INITIAL_ROWS); setSelectedCardId(null); }; // 添加setSelectedCardId(null)
-    const handleSortHand = (type) => setUnassignedHand(prev => (type === 'suit' ? sortCardsBySuit(prev) : sortCardsByRank(prev)));
-    const handleCardClick = (id) => setSelectedCardId(p => (p === id ? null : id));
-    const handleRowClick = (rowName) => {
-        if (!selectedCardId) return;
-        const limits = { front: 3, middle: 5, back: 5 };
-        if (rows[rowName].length >= limits[rowName]) return;
-        const card = unassignedHand.find(c => c.id === selectedCardId);
-        if (card) {
-            setUnassignedHand(p => p.filter(c => c.id !== selectedCardId));
-            setRows(p => ({ ...p, [rowName]: sortCardsByRank([...p[rowName], card]) }));
-            setSelectedCardId(null);
-        }
-    };
-    const handleCardReturn = (card, fromRow) => {
-        setRows(p => ({ ...p, [fromRow]: p[fromRow].filter(c => c.id !== card.id) }));
-        setUnassignedHand(p => sortCardsByRank([...p, card]));
-        setSelectedCardId(null); // 取回牌后取消选中
+        return null;
     };
 
+    const handleDragEnd = (event) => {
+        const { active, over } = event;
+        if (!over) return;
+        
+        const activeId = active.id;
+        const overId = over.id;
+
+        const originalContainer = findContainer(activeId);
+        const overContainer = findContainer(overId) || overId;
+
+        if (!originalContainer || !overContainer || originalContainer === overContainer) {
+            return; // Prevent dragging within the same container or invalid drops
+        }
+
+        setRows(prevRows => {
+            const newRows = { ...prevRows };
+            const cardToMove = newRows[originalContainer].find(card => card.id === activeId);
+            if (!cardToMove) return prevRows; // Should not happen but safety check
+
+            // Remove from original container
+            newRows[originalContainer] = newRows[originalContainer].filter(card => card.id !== activeId);
+
+            // Add to over container - handle dropping onto a row or a card within a row
+            const overCardIndex = newRows[overContainer].findIndex(card => card.id === overId);
+            if (overCardIndex !== -1) {
+                newRows[overContainer].splice(overCardIndex, 0, cardToMove);
+            } else if (overContainer === 'front' || overContainer === 'middle' || overContainer === 'back') {
+                 // Dropping onto the row itself
+                newRows[overContainer].push(cardToMove);
+            } else {
+                return prevRows; // Invalid drop target
+            }
+
+            // 验证牌墩数量限制
+            const limits = { front: 3, middle: 5, back: 5 };
+            if (newRows.front.length > limits.front || newRows.middle.length > limits.middle || newRows.back.length > limits.back) {
+                 alert(`牌墩数量超过限制。头道最多 ${limits.front} 张，中道最多 ${limits.middle} 张，后道最多 ${limits.back} 张。`);
+                return prevRows; // 如果移动导致超过上限，则撤销移动
+            }
+            
+            updatePlayerRows(newRows);
+            setValidationResult(validateArrangement(newRows)); // Re-validate after move
+            return newRows;
+        });
+    };
+
+    const handleCardClick = (cardId) => {
+         // Find the container of the clicked card
+        const containerId = findContainer(cardId);
+        if (!containerId) return; // Should not happen
+
+        setSelectedCardIds(prev => {
+            if (prev.includes(cardId)) {
+                // If already selected, unselect it
+                return prev.filter(id => id !== cardId);
+            } else {
+                // If not selected, add it
+                return [...prev, cardId];
+            }
+        });
+    };
+    
+    const handleStartComparison = () => {
+        const result = validateArrangement(rows);
+        setValidationResult(result);
+        if(result.isValid) {
+            setPlayerReady();
+            navigate('/comparison');
+        } else {
+            alert(result.message || "牌型不合法");
+        }
+    };
+
+    if (!isGameActive || !player) {
+        return (
+             <Container className="page-container">
+                <Button variant="contained" size="large" onClick={handleDealCards} disabled={isLoading}>
+                    {isLoading ? "正在发牌..." : "开始四人牌局"}
+                </Button>
+            </Container>
+        )
+    }
+
     return (
-        <Container className="page-container">
-            <Box className="game-table glass-effect">
-                <Typography variant="h4" sx={{ mb: 2 }}>你的牌局</Typography>
-                {isLoading && <CircularProgress size={60} />}
-                {error && <Typography color="error">{error}</Typography>}
-                {!isLoading && !error && initialHand.length === 0 && ( // 只在未发牌时显示开始按钮
-                    <Button variant="contained" size="large" onClick={handleDealCards} startIcon={<CasinoIcon />}>开始四人牌局</Button>
-                )}
-                {!isLoading && !error && initialHand.length > 0 && ( // 发牌后显示游戏界面
-                    <>
-                        <GameRows rows={rows} onRowClick={handleRowClick} validationResult={validationResult} onCardReturn={handleCardReturn} />
-                        {validationResult && <Chip label={validationResult.message} color={validationResult.isValid ? "success" : "error"} sx={{ m: 2 }} />}
-                        <Box sx={{ width: '100%', mt: 2, mb: 2 }}>
-                           <Typography color="secondary" gutterBottom>手牌区 ({unassignedHand.length}张未分配)</Typography> {/* 显示未分配牌数 */}
-                            <ButtonGroup variant="outlined" size="small" sx={{ mb: 1 }}><Button onClick={() => handleSortHand('rank')} startIcon={<SortByAlphaIcon/>}>按点数</Button><Button onClick={() => handleSortHand('suit')} startIcon={<StyleIcon/>}>按花色</Button></ButtonGroup>
-                            <HandDisplay hand={unassignedHand} onCardClick={handleCardClick} selectedCardId={selectedCardId} />
-                        </Box>
-                        <Stack direction="row" spacing={2} sx={{ mt: 2 }}>
-                            <Button variant="outlined" color="secondary" onClick={handleResetArrangement} startIcon={<ReplayIcon />}>重置摆放</Button>
-                            <Button variant="contained" color="success" onClick={handleConfirm} disabled={!validationResult?.isValid || unassignedHand.length > 0}>确认牌型 & 比牌</Button> {/* 牌未摆完禁用确认按钮 */}
-                        </Stack>
-                    </>
-                )}
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            <Box className="page-container-new-ui">
+                <Box className="game-board glass-effect">
+                    {/* Top Bar */}
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 1 }}>
+                        <Button variant="contained" sx={{ bgcolor: 'error.main', '&:hover': { bgcolor: 'error.dark' } }}>< 退出房间</Button>
+                        <Typography variant="h6">
+                            <span role="img" aria-label="coin">🪙</span> 积分: 100
+                        </Typography>
+                    </Box>
+                    
+                    {/* Player Status */}
+                    <PlayerStatus />
+
+                    {/* Card Rows */}
+                    <Stack spacing={2} sx={{ flexGrow: 1, justifyContent: 'center' }}>
+                        <DroppableRow id="front" label="头道 (3)" cards={rows.front} selectedCardIds={selectedCardIds} onCardClick={handleCardClick} />
+                        <DroppableRow id="middle" label="中道 (5)" cards={rows.middle} selectedCardIds={selectedCardIds} onCardClick={handleCardClick} />
+                        <DroppableRow id="back" label="后道 (5)" cards={rows.back} selectedCardIds={selectedCardIds} onCardClick={handleCardClick} />
+                    </Stack>
+
+                    {/* Action Buttons */}
+                    <Stack direction="row" spacing={2} justifyContent="center" sx={{ p: 2 }}>
+                        <Button variant="contained" color="secondary" sx={{ opacity: 0.8 }}>取消准备</Button>
+                        <Button variant="contained" color="primary" onClick={autoArrangePlayerHand}>智能分牌</Button>
+                        <Button variant="contained" sx={{ bgcolor: '#f57c00' }} onClick={handleStartComparison} disabled={!validationResult?.isValid}>开始比牌</Button>
+                    </Stack>
+                     {!validationResult?.isValid && validationResult?.message && (
+                        <Typography color="error" align="center" sx={{ mt: 1 }}>
+                            {validationResult.message}
+                        </Typography>
+                    )}
+                </Box>
             </Box>
-        </Container>
+        </DndContext>
     );
 }
 

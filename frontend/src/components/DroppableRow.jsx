@@ -9,6 +9,7 @@ export function DroppableRow({ id, label, cards, selectedCardIds, onCardClick })
     const { setNodeRef } = useDroppable({ id });
 
     return (
+        // 【核心修正】: items 属性必须是一个ID数组，而不是对象数组
         <SortableContext id={id} items={cards.map(c => c.id)} strategy={horizontalListSortingStrategy}>
             <Box ref={setNodeRef} className="game-row-new">
                 <Box className="card-container">
@@ -17,7 +18,8 @@ export function DroppableRow({ id, label, cards, selectedCardIds, onCardClick })
                             key={card.id}
                             card={card}
                             isSelected={selectedCardIds.includes(card.id)}
-                            onClick={(e) => onCardClick(card.id, id, e)} // 传递事件对象e
+                            // 传递事件对象e，用于多选判断
+                            onClick={(e) => onCardClick(card.id, id, e)}
                         />
                     ))}
                 </Box>

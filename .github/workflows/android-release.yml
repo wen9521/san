@@ -3,73 +3,61 @@ name: Build and Release Android APK
 on:
   push:
     branches:
-      - main # 当代码推送到main分支时触发
+      - main 
 
 jobs:
   build:
-    runs-on: ubuntu-latest # 使用最新的Ubuntu虚拟机环境
+    runs-on: ubuntu-latest
 
     steps:
-      # 步骤1: 检出你的仓库代码
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # 步骤2: 设置Java环境 (安卓构建需要)
       - name: Set up JDK 17
         uses: actions/setup-java@v3
         with:
           java-version: '17'
           distribution: 'temurin'
 
-      # 步骤3: 设置Node.js环境 (React构建需要)
+      # 【核心修正】: 将Node.js版本从18提升到20
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '18' # 使用与你IDX环境匹配的版本
+          node-version: '20' 
 
-      # 步骤4: 安装React前端依赖并构建
       - name: Install and build frontend
+        working-directory: ./frontend 
         run: |
-          cd frontend
           npm install
           npm run build
       
-      # 步骤5: 设置安卓命令行工具 (SDK)
       - name: Setup Android SDK
         uses: android-actions/setup-android@v2
 
-      # 步骤6: 同步Capacitor项目
       - name: Capacitor Sync
+        working-directory: ./frontend
         run: |
-          cd frontend
-          npm install @capacitor/cli @capacitor/android # 确保CLI可用
+          npm install @capacitor/cli
           npx cap sync android
 
-      # 步骤7: 解码并创建签名密钥文件
-      # 它会从GitHub Secrets读取Base64字符串，解码后写入一个临时的keystore文件
       - name: Decode Keystore
         run: |
-          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > ${{ github.workspace }}/frontend/android/app/my-release-key.keystore
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > android/app/my-release-key.keystore
       
-      # 步骤8: 构建签名的Release APK
-      # 使用Gradle来执行构建任务，并通过环境变量传递密钥信息
       - name: Build Release APK
-        working-directory: ./frontend/android
+        working-directory: ./android 
         run: ./gradlew assembleRelease
         env:
           SIGNING_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           SIGNING_KEY_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           SIGNING_STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
 
-      # 步骤9: 发布APK到GitHub Releases
       - name: Create GitHub Release
         uses: ncipollo/release-action@v1
         with:
-          # 使用commit的SHA作为标签，保证唯一性
           tag: release-${{ github.sha }}
-          # 将构建好的APK文件作为发布附件
-          artifacts: "frontend/android/app/build/outputs/apk/release/app-release.apk"
-          # 从GitHub Secrets获取token，以便Action有权创建Release
+          # 【路径修正】: 之前我给的路径少了一个 -signed，已更正
+          artifacts: "android/app/build/outputs/apk/release/app-release-unsigned-signed.apk"
           token: ${{ secrets.GITHUB_TOKEN }}
-          # 允许覆盖同名tag的release，方便调试
           allowUpdates: true
+          body: "自动构建的安卓应用包"

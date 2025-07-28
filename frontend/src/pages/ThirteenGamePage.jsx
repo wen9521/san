@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Button, Container, Typography, Box, Stack, CircularProgress } from '@mui/material';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragOverlay } from '@dnd-kit/core';
 import { useNavigate } from 'react-router-dom';
@@ -6,7 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { useGame } from '../context/GameContext';
 import PlayerStatus from '../components/PlayerStatus';
 import { DroppableRow } from '../components/DroppableRow';
-import { DraggableCard } from '../components/DraggableCard'; // 用于拖拽覆盖层
+import { DraggableCard } from '../components/DraggableCard';
 import { validateArrangement, sortCardsByRank } from '../utils/thirteenLogic';
 import '../styles/App.css';
 
@@ -14,26 +14,38 @@ const API_URL = 'https://9525.ip-ddns.com/api/deal.php';
 
 function ThirteenGamePage() {
     const navigate = useNavigate();
-    const { players, startGame, isGameActive, updatePlayerRows, autoArrangePlayerHand, setPlayerReady, calculateResults } = useGame();
+    // 从Context获取所有需要的状态和函数
+    const { players, isGameActive, startGame, updatePlayerRows, autoArrangePlayerHand, setPlayerReady, calculateResults } = useGame();
     
+    // 【核心修正 1】: 直接从Context派生出玩家和牌墩数据，不再使用本地useState
     const player = players.find(p => p.id === 'player');
-    const [rows, setRows] = useState(player?.rows || { front: [], middle: [], back: [] });
-    const [selectedCardIds, setSelectedCardIds] = useState([]);
-    const [activeDragId, setActiveDragId] = useState(null); // 追踪正在拖拽的卡片
-    const [validationResult, setValidationResult] = useState(null);
-    const [isLoading, setIsLoading] = useState(false);
+    const rows = player?.rows || { front: [], middle: [], back: [] };
+    const validationResult = player ? validateArrangement(player.rows) : null;
 
-    useEffect(() => {
-        if (player) {
-            setRows(player.rows);
-            setValidationResult(validateArrangement(player.rows));
-        }
-    }, [player]);
+    const [selectedCardIds, setSelectedCardIds] = useState([]);
+    const [activeDragId, setActiveDragId] = useState(null);
+    const [isLoading, setIsLoading] = useState(false);
 
     const sensors = useSensors(useSensor(PointerSensor), useSensor(KeyboardSensor));
 
-    const handleDealCards = async () => { /* ... 此函数不变 ... */ };
-
+    const handleDealCards = async () => {
+        setIsLoading(true);
+        try {
+            const response = await fetch(API_URL);
+            const data = await response.json();
+            if (data.success && data.hand.length === 52) {
+                startGame(data.hand); // 启动游戏，Context将负责更新players状态
+            } else {
+                 throw new Error('获取的牌数不足52张');
+            }
+        } catch(e) {
+            console.error("发牌失败:", e);
+            // 可以在此设置一个错误状态来显示给用户
+        } finally {
+            setIsLoading(false);
+        }
+    };
+    
     const findContainer = (id) => {
         for (const rowId in rows) {
             if (rows[rowId].some(card => card.id === id)) return rowId;
@@ -41,15 +53,14 @@ function ThirteenGamePage() {
         return null;
     };
     
-    // 多选逻辑
     const handleCardClick = (cardId, rowId, event) => {
         event.stopPropagation();
-        if (event.shiftKey) { // 按住Shift进行范围选择
+        // 多选逻辑不变...
+        if (event.shiftKey) {
             const row = rows[rowId];
             const lastSelectedId = selectedCardIds[selectedCardIds.length - 1];
             const lastSelectedIndex = lastSelectedId ? row.findIndex(c => c.id === lastSelectedId) : -1;
             const currentIndex = row.findIndex(c => c.id === cardId);
-            
             if (lastSelectedIndex !== -1 && currentIndex !== -1) {
                 const start = Math.min(lastSelectedIndex, currentIndex);
                 const end = Math.max(lastSelectedIndex, currentIndex);
@@ -58,19 +69,15 @@ function ThirteenGamePage() {
             } else {
                  setSelectedCardIds(prev => [...prev, cardId]);
             }
-        } else if (event.ctrlKey || event.metaKey) { // 按住Ctrl/Cmd进行单点加/减选
-            setSelectedCardIds(prev => 
-                prev.includes(cardId) ? prev.filter(id => id !== cardId) : [...prev, cardId]
-            );
-        } else { // 普通单击
+        } else if (event.ctrlKey || event.metaKey) {
+            setSelectedCardIds(prev => prev.includes(cardId) ? prev.filter(id => id !== cardId) : [...prev, cardId]);
+        } else {
             setSelectedCardIds([cardId]);
         }
     };
     
-    // --- 拖拽核心逻辑 ---
     const handleDragStart = (event) => {
         setActiveDragId(event.active.id);
-        // 如果拖拽的卡片未被选中，则清空其他选中，只选中当前拖拽的卡片
         if (!selectedCardIds.includes(event.active.id)) {
             setSelectedCardIds([event.active.id]);
         }
@@ -89,41 +96,43 @@ function ThirteenGamePage() {
         const itemsToMove = selectedCardIds.includes(active.id) ? selectedCardIds : [active.id];
         const movedCardsData = [];
         
-        const nextRows = JSON.parse(JSON.stringify(rows));
+        // 【核心修正 2】: 直接基于当前的rows计算出新rows，然后调用Context的更新函数
+        const newRows = JSON.parse(JSON.stringify(rows));
 
-        // 1. 从原位置移除所有要移动的卡片
         itemsToMove.forEach(id => {
-            const container = findContainer(id);
-            if (container) {
-                const cardIndex = nextRows[container].findIndex(c => c.id === id);
+            const container = findContainer(id); // 需要用闭包前的findContainer
+            if (container && newRows[container]) {
+                const cardIndex = newRows[container].findIndex(c => c.id === id);
                 if (cardIndex !== -1) {
-                    movedCardsData.push(nextRows[container][cardIndex]);
-                    nextRows[container].splice(cardIndex, 1);
+                    movedCardsData.push(newRows[container][cardIndex]);
+                    newRows[container].splice(cardIndex, 1);
                 }
             }
         });
-
-        // 2. 将卡片添加到新位置
-        const overIndex = over.id in nextRows[overContainerId] ? nextRows[overContainerId].findIndex(c => c.id === over.id) : nextRows[overContainerId].length;
-        nextRows[overContainerId].splice(overIndex, 0, ...movedCardsData);
         
-        // 3. 验证牌墩数量
+        const overIndex = newRows[overContainerId] ? newRows[overContainerId].findIndex(c => c.id === over.id) : -1;
+        if(overIndex !== -1) {
+             newRows[overContainerId].splice(overIndex, 0, ...movedCardsData);
+        } else {
+             newRows[overContainerId].push(...movedCardsData);
+        }
+        
         const limits = { front: 3, middle: 5, back: 5 };
-        if (nextRows.front.length > limits.front || nextRows.middle.length > limits.middle || nextRows.back.length > limits.back) {
-            return; // 移动无效，不更新状态
+        if (newRows.front.length > limits.front || newRows.middle.length > limits.middle || newRows.back.length > limits.back) {
+            return;
         }
 
-        // 4. 对新牌墩排序并更新状态
-        nextRows[overContainerId] = sortCardsByRank(nextRows[overContainerId]);
-        setRows(nextRows);
-        updatePlayerRows(nextRows);
-        setSelectedCardIds([]); // 拖拽结束后清空选择
+        newRows[overContainerId] = sortCardsByRank(newRows[overContainerId]);
+        
+        // 调用Context的函数来更新全局状态，而不是本地的setRows
+        updatePlayerRows(newRows);
+        setSelectedCardIds([]);
     };
     
     const handleStartComparison = () => {
         if (validationResult?.isValid) {
-            const updatedPlayers = setPlayerReady(); // 获取同步更新后的状态
-            if (calculateResults(updatedPlayers)) { // 传入新状态进行计算
+            const updatedPlayers = setPlayerReady();
+            if (calculateResults(updatedPlayers)) {
                 navigate('/comparison');
             }
         } else {
@@ -131,9 +140,15 @@ function ThirteenGamePage() {
         }
     };
 
-    // ... (其他函数: autoArrangePlayerHand, etc. 保持不变) ...
-
-    if (!isGameActive) { /* ... 此部分不变 ... */ }
+    if (!isGameActive) {
+        return (
+             <Container className="page-container">
+                <Button variant="contained" size="large" onClick={handleDealCards} disabled={isLoading}>
+                    {isLoading ? <CircularProgress size={24} color="inherit"/> : "开始四人牌局"}
+                </Button>
+            </Container>
+        )
+    }
 
     const activeCardData = activeDragId ? player.hand.find(c => c.id === activeDragId) : null;
 
@@ -146,7 +161,14 @@ function ThirteenGamePage() {
         >
             <Box className="page-container-new-ui">
                 <Box className="game-board glass-effect">
-                    {/* ... (Top Bar 和 PlayerStatus 不变) ... */}
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 1 }}>
+                        <Button variant="contained" sx={{ bgcolor: 'error.main', '&:hover': { bgcolor: 'error.dark' } }}>退出房间</Button>
+                        <Typography variant="h6">
+                            <span role="img" aria-label="coin" style={{marginRight: '8px'}}>🪙</span>
+                            积分: 100
+                        </Typography>
+                    </Box>
+                    
                     <PlayerStatus />
 
                     <Stack spacing={2} sx={{ flexGrow: 1, justifyContent: 'center' }}>
@@ -154,17 +176,21 @@ function ThirteenGamePage() {
                         <DroppableRow id="middle" label="中道 (5)" cards={rows.middle} selectedCardIds={selectedCardIds} onCardClick={handleCardClick} />
                         <DroppableRow id="back" label="后道 (5)" cards={rows.back} selectedCardIds={selectedCardIds} onCardClick={handleCardClick} />
                     </Stack>
-                    
-                    {/* ... (Action Buttons 不变) ... */}
+
+                    <Stack direction="row" spacing={2} justifyContent="center" sx={{ p: 2 }}>
+                        <Button variant="contained" color="secondary" sx={{ opacity: 0.8 }}>取消准备</Button>
+                        <Button variant="contained" color="primary" onClick={autoArrangePlayerHand}>智能分牌</Button>
+                        <Button variant="contained" sx={{ bgcolor: '#f57c00' }} onClick={handleStartComparison}>开始比牌</Button>
+                    </Stack>
                 </Box>
             </Box>
             <DragOverlay>
                 {activeDragId && activeCardData ? (
-                    <div style={{ display: 'flex' }}>
-                       {/* 显示所有被选中的卡片作为拖拽预览 */}
+                    <div style={{ display: 'flex', gap: '-45px' }}>
                        {selectedCardIds.map(id => {
                             const card = player.hand.find(c => c.id === id);
-                            return <DraggableCard key={id} card={card} />;
+                            if (card) return <DraggableCard key={id} card={card} isSelected={false} onClick={()=>{}} />;
+                            return null;
                        })}
                     </div>
                 ) : null}

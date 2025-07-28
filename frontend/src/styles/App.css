@@ -1,0 +1,68 @@
+/* 应用主容器 */
+.app-container {
+  text-align: center;
+  padding: 2rem;
+  min-height: 100vh;
+}
+
+/* 牌桌区域 */
+.poker-table {
+  background-color: #0d5a2b;
+  border-radius: 150px;
+  padding: 3rem;
+  margin-top: 2rem;
+  border: 10px solid #5a3a1a;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), inset 0 0 20px rgba(0, 0, 0, 0.3);
+}
+
+/* 手牌展示区域 */
+.hand-display {
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: -40px; /* 卡牌重叠效果 */
+  height: 200px; /* 给手牌区域一个固定高度 */
+  perspective: 1000px; /* 3D效果的透视 */
+}
+
+/* 单张扑克牌 */
+.poker-card {
+  width: 100px;
+  height: 140px;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s ease-in-out;
+  cursor: pointer;
+  position: relative; /* 为了动画 */
+}
+
+.poker-card img {
+  width: 100%;
+  height: 100%;
+  border-radius: 8px;
+}
+
+/* 卡牌悬停效果 */
+.poker-card:hover {
+  transform: translateY(-20px) rotate(2deg) scale(1.1);
+  z-index: 10;
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.4);
+}
+
+/* 发牌动画 */
+@keyframes deal-card {
+  from {
+    opacity: 0;
+    transform: translateY(-100px) rotate(45deg) scale(0.5);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) rotate(var(--rotation)) scale(1);
+  }
+}
+
+.poker-card-enter {
+  animation: deal-card 0.5s ease-out forwards;
+  animation-delay: var(--delay);
+}

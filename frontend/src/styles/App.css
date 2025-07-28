@@ -1,137 +1,50 @@
-/* 全局容器 */
-.page-container {
+/* ... 保留之前的样式 ... */
+
+/* 新增：被选中卡牌的样式 */
+.poker-card.selected {
+  transform: translateY(-25px) scale(1.15);
+  box-shadow: 0 0 20px 5px #ffab40; /* 高亮选中效果 */
+  z-index: 101 !important; /* 确保在最上层 */
+}
+
+/* 新增：游戏三道牌区域的样式 */
+.game-rows-container {
+  width: 100%;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 100vh;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.game-row {
+  background: rgba(0, 0, 0, 0.2);
+  border: 2px dashed rgba(255, 255, 255, 0.3);
+  border-radius: 12px;
   padding: 1rem;
-  box-sizing: border-box; /* 确保 padding 不会撑大容器 */
-}
-
-/* 毛玻璃/玻璃拟态效果 */
-.glass-effect {
-  background: rgba(26, 58, 26, 0.25); /* 半透明背景 */
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px); /* 兼容 Safari */
-  border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  padding: 2rem;
-  color: white;
-}
-
-/* 主菜单页面样式 */
-.home-menu {
-  width: 90%;
-  max-width: 500px;
-  text-align: center;
-}
-
-.home-menu .MuiButton-root {
-  margin: 1rem 0;
-  padding: 1rem 0;
-  font-weight: bold;
-  font-size: 1.2rem;
+  min-height: 120px;
   width: 100%;
+  box-sizing: border-box;
+  cursor: pointer;
+  transition: all 0.3s ease;
 }
-
-/* 游戏页面样式 */
-.game-table {
-  width: 100%;
-  max-width: 1200px;
-  min-height: 450px; /* 给一个最小高度，避免内容跳动 */
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  align-items: center;
+.game-row:hover {
+  background: rgba(0, 0, 0, 0.4);
+  border-color: #ffab40;
 }
-
-/* 手牌展示区域 */
-.hand-display {
+.game-row-content {
   display: flex;
   justify-content: center;
-  align-items: flex-end;
-  flex-wrap: wrap; /* 允许在小屏幕上换行 */
-  gap: 1rem; /* 换行时的间距 */
+  align-items: center;
+  gap: -30px; /* 卡牌重叠 */
+}
+
+/* ... 之前的 poker-card 样式可能需要微调，以适应在row里显示 ... */
+.game-row .poker-card {
+  width: 70px; /* 在row里的牌小一点 */
   height: auto;
-  min-height: 180px; /* 扑克牌的高度 + 悬停效果 */
-  width: 100%;
-  padding: 1rem 0;
-  perspective: 1200px; /* 3D效果的透视 */
+  margin-left: -30px;
 }
-
-/* 单张扑克牌 (响应式设计) */
-.poker-card {
-  /* 使用 clamp() 实现响应式大小 */
-  /* 最小60px, 理想尺寸18vw, 最大100px */
-  width: clamp(60px, 18vw, 100px); 
-  height: auto;
-  aspect-ratio: 2.5 / 3.5; /* 保持扑克牌比例 */
-
-  border-radius: 8px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-  transition: all 0.3s ease-in-out;
-  cursor: pointer;
-  position: relative;
-  /* 关键的重叠效果，使用负margin */
-  margin-left: -35px;
-}
-.hand-display > :first-child {
-  margin-left: 0; /* 第一张牌不需要负margin */
-}
-
-.poker-card img {
-  width: 100%;
-  height: 100%;
-  border-radius: inherit; /* 继承父元素的圆角 */
-  display: block; /* 移除图片底部的微小空隙 */
-}
-
-.poker-card:hover {
-  transform: translateY(-20px) scale(1.1);
-  z-index: 100; /* 确保悬停的牌在最上层 */
-  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.4);
-}
-
-/* 发牌动画 */
-@keyframes deal-card {
-  from {
-    opacity: 0;
-    transform: translateY(-150px) rotate(60deg) scale(0.3);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) rotate(var(--rotation)) scale(1);
-  }
-}
-
-.poker-card-enter {
-  animation: deal-card 0.6s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
-  animation-delay: var(--delay);
-}
-
-
-/* 移动端屏幕媒体查询 */
-@media (max-width: 768px) {
-  .poker-card {
-    /* 在小屏幕上，减少重叠，让牌更清晰 */
-    margin-left: -40px; 
-  }
-
-  .game-table {
-    padding: 1rem;
-    min-height: 400px;
-  }
-}
-
-@media (max-width: 480px) {
-  .poker-card {
-    margin-left: -45px; /* 在手机上，重叠更多以节省空间 */
-  }
-
-  .hand-display {
-    perspective: 800px;
-    min-height: 150px;
-  }
+.game-row .poker-card:hover {
+  /* 在row里的牌悬停效果可以简化 */
+  transform: translateY(-10px);
 }

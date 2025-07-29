@@ -1,8 +1,8 @@
 import React from 'react';
-import { Box, Typography } from '@mui/material';
+import { Box, Typography, Chip } from '@mui/material';
 import { PokerCard } from './PokerCard'; // 使用新的 PokerCard 组件
 
-export const GameRow = ({ id, cards, label, onRowClick, selectedCardIds, onCardClick }) => {
+export const GameRow = ({ id, cards, label, onRowClick, selectedCardIds, onCardClick, typeName }) => {
     const CARD_WIDTH = 90;
     const CARD_HEIGHT = 126;
     const OVERLAP = 40;
@@ -40,7 +40,7 @@ export const GameRow = ({ id, cards, label, onRowClick, selectedCardIds, onCardC
                         key={card.id}
                         sx={{
                             marginLeft: index > 0 ? `-${OVERLAP}px` : 0,
-                            zIndex: 1, // 所有牌同层，选中不会盖住后面
+                            zIndex: 1,
                             position: 'relative',
                             transition: 'margin-left 0.2s',
                         }}
@@ -64,8 +64,33 @@ export const GameRow = ({ id, cards, label, onRowClick, selectedCardIds, onCardC
                     }}
                 />
             </Box>
-            <Box sx={{ width: '80px', textAlign: 'center', color: 'white', flexShrink: 0 }}>
-                <Typography variant="h6">{label}</Typography>
+            <Box sx={{ 
+                width: '100px', 
+                textAlign: 'center', 
+                color: 'white', 
+                flexShrink: 0, 
+                display: 'flex', 
+                flexDirection: 'column', 
+                alignItems: 'center',
+                justifyContent: 'center',
+                overflow: 'hidden' 
+            }}>
+                <Typography variant="h6" sx={{ mb: 0, fontSize: '1.1rem', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden', maxWidth: '100%' }}>{label}</Typography>
+                {typeName && (
+                    <Chip
+                        label={typeof typeName === 'string' ? typeName : ''}
+                        color="secondary"
+                        size="small"
+                        sx={{
+                            mt: 0.5,
+                            maxWidth: '90px',
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            fontSize: '0.85rem'
+                        }}
+                    />
+                )}
             </Box>
         </Box>
     );

@@ -1,10 +1,9 @@
 import React, { useContext, useState } from 'react';
-import { Box, Typography, Button, Paper, Grid, IconButton } from '@mui/material';
+import { Box, Typography, Button, Paper, Grid } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import AuthDialog from '../components/AuthDialog';
 import PointsDialog from '../components/PointsDialog';
 import { AuthContext } from '../context/AuthContext';
-import MenuIcon from '@mui/icons-material/Menu';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import MonetizationOnIcon from '@mui/icons-material/MonetizationOn';
 
@@ -59,8 +58,6 @@ const HomePage = () => {
     </Box>
   );
 
-  // 主页内容略
-  // ... 保持原有内容
   return (
     <Box
       sx={{
@@ -73,9 +70,60 @@ const HomePage = () => {
         position: 'relative'
       }}
     >
+      <TopBar />
       <Grid container spacing={4} sx={{ maxWidth: '1200px' }}>
-        {/* ...原十三张与八张内容不变 */}
-        {/* ...（略） */}
+        {/* 十三张板块 */}
+        <Grid item xs={12} md={6}>
+          <Paper
+            elevation={6}
+            sx={{
+              p: 4,
+              textAlign: 'center',
+              background: 'rgba(255, 255, 255, 0.08)',
+              border: '1px solid rgba(255, 255, 255, 0.15)',
+              color: 'white',
+              backdropFilter: 'blur(10px)',
+            }}
+          >
+            <Typography variant="h3" gutterBottom sx={{ fontWeight: 'bold', color: '#ffd700' }}>
+              十三张
+            </Typography>
+            <Box sx={{ mt: 3, display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <Button variant="contained" color="primary" size="large" onClick={() => navigate('/thirteen/play', { state: { mode: 'offline' } })}>+
+                试玩
+              </Button>
+              <Button variant="outlined" color="secondary" size="large" onClick={() => navigate('/rooms')}>
+                选择房间
+              </Button>
+            </Box>
+          </Paper>
+        </Grid>
+        {/* 八张板块 */}
+        <Grid item xs={12} md={6}>
+          <Paper
+            elevation={6}
+            sx={{
+              p: 4,
+              textAlign: 'center',
+              background: 'rgba(255, 255, 255, 0.08)',
+              border: '1px solid rgba(255, 255, 255, 0.15)',
+              color: 'white',
+              backdropFilter: 'blur(10px)',
+            }}
+          >
+            <Typography variant="h3" gutterBottom sx={{ fontWeight: 'bold', color: '#4dd0e1' }}>
+              八张
+            </Typography>
+            <Box sx={{ mt: 3, display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <Button variant="contained" sx={{ backgroundColor: '#0097a7', '&:hover': {backgroundColor: '#00838f'} }} size="large" onClick={() => navigate('/eight/play')}>+
+                试玩
+              </Button>
+              <Button variant="outlined" color="secondary" size="large" disabled>
+                选择房间
+              </Button>
+            </Box>
+          </Paper>
+        </Grid>
       </Grid>
       <AuthDialog open={showAuth} onClose={() => setShowAuth(false)} />
       <PointsDialog open={showPoints} onClose={() => setShowPoints(false)} />

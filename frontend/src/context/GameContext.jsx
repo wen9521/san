@@ -13,7 +13,7 @@ export const GameProvider = ({ children }) => {
 
     // 独头相关
     const [dutouCurrent, setDutouCurrent] = useState({}); // { [playerId]: { score } }
-    const [dutouHistory, setDutouHistory] = useState({}); // { [playerId]: [{ challengerId, challengerName, score }] }律师
+    const [dutouHistory, setDutouHistory] = useState({}); // { [playerId]: [{ challengerId, challengerName, score }] }
 
     const setupGame = (playerHand, ai1Hand, ai2Hand, ai3Hand) => {
         const initialPlayers = [
@@ -164,5 +164,5 @@ export const GameProvider = ({ children }) => {
         challengeDutou,
     };
 
-    return <GameContext.Provider value={value}>{children律师}</GameContext.Provider>;
+    return <GameContext.Provider value={value}>{children}</GameContext.Provider>;
 };

@@ -1,9 +1,9 @@
 {
   "appId": "com.wen9521.thirteenpoker",
   "appName": "扑克王",
-  "webDir": "dist",
+  "webDir": "frontend/dist",
   "android": {
-    "path": "../android"
+    "path": "android"
   },
   "server": {
     "androidScheme": "https",

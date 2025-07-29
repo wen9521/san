@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { Button, Container, Typography, Box, Stack, CircularProgress } from '@mui/material';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragOverlay } from '@dnd-kit/core';
 import { useNavigate } from 'react-router-dom';
+// 【核心修正 1/2】: 引入 Capacitor Community HTTP 插件
+import { Http } from '@capacitor-community/http';
 
 import { useGame } from '../context/GameContext';
 import PlayerStatus from '../components/PlayerStatus';
@@ -36,23 +38,29 @@ function ThirteenGamePage() {
     const handleDealCards = async () => {
         setIsLoading(true);
         try {
-            const response = await fetch(API_URL, { signal: AbortSignal.timeout(8000) }); // 8秒超时
-            if (!response.ok) {
-                throw new Error(`网络响应不成功: ${response.status} ${response.statusText}`);
-            }
-            const data = await response.json();
-            if (data.success && data.hand.length === 52) {
-                startGame(data.hand);
+            // 【核心修正 2/2】: 使用 Http.request() 替代 fetch()
+            const response = await Http.request({
+                method: 'GET',
+                url: API_URL,
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                connectTimeout: 8000,
+                readTimeout: 8000,
+            });
+
+            // Http 插件在请求不成功时会直接抛出错误，所以我们主要检查响应数据
+            if (response.data && response.data.success && response.data.hand.length === 52) {
+                startGame(response.data.hand);
             } else {
-                throw new Error(data.message || '从服务器获取的牌数据格式不正确');
+                throw new Error('从服务器获取的牌数据格式不正确');
             }
         } catch (e) {
-            const errorMessage = `发牌失败: ${e.message}
+            const errorMessage = `发牌失败: ${e.message || '请检查网络连接或服务器状态。'}
 
 请检查：
 1. 手机网络连接是否正常。
-2. 确保服务器 '9525.ip-ddns.com' 正在运行并且可以从公网访问。
-3. 如果使用https，请确保SSL证书是有效的。`;
+2. 确保服务器 '9525.ip-ddns.com' 正在运行并且可以从公网访问。`;
             alert(errorMessage);
             console.error("发牌失败的详细信息:", e);
         } finally {

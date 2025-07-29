@@ -1,8 +1,8 @@
 import React, { useContext, useState } from 'react';
 import { Box, Typography, Button, Paper, Grid } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
-import AuthDialog from '../components/AuthDialog';
-import PointsDialog from '../components/PointsDialog';
+import AuthDialog from '../components/AuthDialog.jsx';
+import PointsDialog from '../components/PointsDialog.jsx';
 import { AuthContext } from '../context/AuthContext.jsx';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import MonetizationOnIcon from '@mui/icons-material/MonetizationOn';

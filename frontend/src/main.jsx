@@ -4,7 +4,7 @@ import App from './App.jsx';
 import './index.css';
 import { CssBaseline, ThemeProvider, createTheme } from '@mui/material';
 import { HashRouter } from 'react-router-dom';
-import { AuthProvider } from './context/AuthContext'; // ★ 加上这一行
+import { AuthProvider } from './context/AuthContext.jsx';
 
 const darkTheme = createTheme({
   palette: {

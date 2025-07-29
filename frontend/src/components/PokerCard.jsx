@@ -10,11 +10,16 @@ export const PokerCard = ({ card, isSelected, onClick }) => {
         cursor: 'pointer',
     };
 
+    const handleClick = (e) => {
+        e.stopPropagation(); // 阻止事件冒泡到父组件(GameRow)
+        onClick(card.id);
+    };
+
     return (
         <div 
             style={style} 
             className="poker-card"
-            onClick={() => onClick(card.id)}
+            onClick={handleClick}
         >
             <img src={`/assets/cards/${card.id}.svg`} alt={card.id} style={{ width: '100%', height: '100%' }} />
         </div>

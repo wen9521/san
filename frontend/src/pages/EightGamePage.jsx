@@ -3,31 +3,25 @@ import { Button, Box, Stack, Typography, CircularProgress, Container } from '@mu
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragOverlay } from '@dnd-kit/core';
 import { useNavigate } from 'react-router-dom';
 
-// 【核心改造】: 引入并使用新的Context
 import { useEightGame } from '../context/EightGameContext'; 
-import PlayerStatus from '../components/PlayerStatus';
+import PlayerStatus from '../components/PlayerStatus'; // 引入重构后的组件
 import { DroppableRow } from '../components/DroppableRow';
-// 【核心改造】: 引入八张逻辑
 import { validateEightArrangement, sortCardsByRank, findCardInRows } from '../utils/eightLogic';
 import '../styles/App.css';
 
 function EightGamePage() {
     const navigate = useNavigate();
-    // 【核心改造】: 从Context获取所有状态和方法
+    // 【核心修正】: 从Context获取完整的players数组
     const { players, isGameActive, startGame, resetGame, updatePlayerRows, autoArrangePlayerHand } = useEightGame();
     
     const [selectedCardIds, setSelectedCardIds] = useState([]);
     const [activeDragId, setActiveDragId] = useState(null);
 
-    // 从 context 中派生出当前玩家的数据
     const player = players.find(p => p.id === 'player');
     const rows = player?.rows || { front: [], middle: [], back: [] };
     
     useEffect(() => {
-        // 当组件加载时，自动开始游戏
         startGame();
-
-        // 当组件卸载时，重置游戏状态
         return () => {
             resetGame();
         };
@@ -39,12 +33,12 @@ function EightGamePage() {
         const validationResult = validateEightArrangement(rows);
         if (validationResult.isValid) {
             alert("牌型合法，准备比牌！(比牌逻辑后续实现)");
-            // navigate('/eight/comparison');
         } else {
             alert(validationResult.message);
         }
     };
 
+    // ... (拖拽等其他逻辑保持不变)
     const handleDragEnd = (event) => {
         const { active, over } = event;
         setActiveDragId(null);
@@ -53,16 +47,13 @@ function EightGamePage() {
         const currentRows = player.rows;
         let newRows = JSON.parse(JSON.stringify(currentRows));
         
-        // 找到被拖动的卡片及其来源
         const sourceRowId = Object.keys(currentRows).find(key => currentRows[key].some(c => c.id === active.id));
         const cardToMove = sourceRowId ? currentRows[sourceRowId].find(c => c.id === active.id) : null;
 
         if (!sourceRowId || !cardToMove) return;
 
-        // 从原位置移除
         newRows[sourceRowId] = newRows[sourceRowId].filter(c => c.id !== active.id);
         
-        // 添加到新位置
         const overRowId = over.id in newRows ? over.id : Object.keys(newRows).find(key => newRows[key].some(c => c.id === over.id));
         if (newRows[overRowId]) {
              newRows[overRowId].push(cardToMove);
@@ -72,7 +63,6 @@ function EightGamePage() {
         updatePlayerRows(newRows);
         setSelectedCardIds([]);
     };
-    
     const handleDragStart = (event) => setActiveDragId(event.active.id);
     const handleCardClick = (cardId) => setSelectedCardIds(prev => prev.includes(cardId) ? [] : [cardId]);
     const activeCardForOverlay = activeDragId ? findCardInRows(rows, activeDragId) : null;
@@ -93,7 +83,8 @@ function EightGamePage() {
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 1 }}>
                         <Button variant="contained" sx={{ bgcolor: 'error.main' }} onClick={() => navigate('/')}>退出游戏</Button>
                     </Box>
-                    <PlayerStatus playerCount={6} />
+                    {/* 【核心修正】: 将完整的players数组传递给PlayerStatus */}
+                    <PlayerStatus players={players} />
                     <Stack spacing={2} sx={{ flexGrow: 1, justifyContent: 'center' }}>
                         <DroppableRow id="front" label="头道 (2)" cards={rows.front} selectedCardIds={selectedCardIds} onCardClick={handleCardClick} />
                         <DroppableRow id="middle" label="中道 (3)" cards={rows.middle} selectedCardIds={selectedCardIds} onCardClick={handleCardClick} />

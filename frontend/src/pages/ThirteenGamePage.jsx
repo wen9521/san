@@ -4,31 +4,28 @@ import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, us
 import { useLocation, useNavigate } from 'react-router-dom';
 
 import { useGame } from '../context/GameContext';
-import PlayerStatus from '../components/PlayerStatus';
+import PlayerStatus from '../components/PlayerStatus'; // 引入重构后的组件
 import { DroppableRow } from '../components/DroppableRow';
 import { validateArrangement, sortCardsByRank, findCardInRows } from '../utils/thirteenLogic';
 import '../styles/App.css';
 
 function ThirteenGamePage() {
     const navigate = useNavigate();
-    const location = useLocation(); // 获取导航状态
+    const location = useLocation();
+    // 【核心修正】: 从Context中获取完整的players数组
     const { players, isGameActive, startOfflineGame, resetGame, updatePlayerRows, autoArrangePlayerHand, setPlayerReady, calculateResults } = useGame();
     
     const [selectedCardIds, setSelectedCardIds] = useState([]);
     const [activeDragId, setActiveDragId] = useState(null);
     
-    // 从 context 中派生出当前玩家的数据
     const player = players.find(p => p.id === 'player');
     const rows = player?.rows || { front: [], middle: [], back: [] };
     const validationResult = player ? validateArrangement(player.rows) : null;
 
     useEffect(() => {
-        // 【核心重构】: 根据导航状态启动不同模式的游戏
         if (location.state?.mode === 'offline') {
             startOfflineGame();
         }
-        // 在线模式的启动逻辑可以放在这里，例如从服务器获取数据后调用 startOnlineGame
-
         return () => {
             resetGame();
         };
@@ -44,7 +41,7 @@ function ThirteenGamePage() {
         if (validationResult?.isValid) {
             const updatedPlayers = setPlayerReady();
             if (calculateResults(updatedPlayers)) {
-                navigate('/thirteen/comparison'); // 修正了导航路径
+                navigate('/thirteen/comparison');
             }
         } else {
             alert(validationResult?.message || "牌型不合法，请调整后再试。");
@@ -59,7 +56,7 @@ function ThirteenGamePage() {
             </Container>
         )
     }
-
+    
     // ... (拖拽等其他逻辑保持不变)
     const activeCardForOverlay = activeDragId ? findCardInRows(rows, activeDragId) : null;
     const findContainerIdForCard = (cardId, currentRows) => {
@@ -88,7 +85,7 @@ function ThirteenGamePage() {
         }
         
         if (newRows.front.length > 3 || newRows.middle.length > 5 || newRows.back.length > 5) {
-            return; // 简单回退，不更新状态
+            return;
         }
 
         updatePlayerRows(newRows);
@@ -102,7 +99,8 @@ function ThirteenGamePage() {
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 1 }}>
                         <Button variant="contained" sx={{ bgcolor: 'error.main' }} onClick={handleExitGame}>退出游戏</Button>
                     </Box>
-                    <PlayerStatus playerCount={4} />
+                    {/* 【核心修正】: 将完整的players数组传递给PlayerStatus */}
+                    <PlayerStatus players={players} />
                     <Stack spacing={2} sx={{ flexGrow: 1, justifyContent: 'center' }}>
                         <DroppableRow id="front" label="头道 (3)" cards={rows.front} selectedCardIds={selectedCardIds} onCardClick={handleCardClick} />
                         <DroppableRow id="middle" label="中道 (5)" cards={rows.middle} selectedCardIds={selectedCardIds} onCardClick={handleCardClick} />

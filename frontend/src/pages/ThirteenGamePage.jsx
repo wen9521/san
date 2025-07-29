@@ -36,22 +36,25 @@ function ThirteenGamePage() {
     const handleDealCards = async () => {
         setIsLoading(true);
         try {
-            const response = await fetch(API_URL);
+            const response = await fetch(API_URL, { signal: AbortSignal.timeout(8000) }); // 8秒超时
             if (!response.ok) {
-                // 如果HTTP响应状态码不是2xx, 抛出错误
-                throw new Error(`网络错误: ${response.status} ${response.statusText}`);
+                throw new Error(`网络响应不成功: ${response.status} ${response.statusText}`);
             }
             const data = await response.json();
             if (data.success && data.hand.length === 52) {
                 startGame(data.hand);
             } else {
-                // 如果API返回的业务逻辑失败或数据不完整, 抛出错误
-                throw new Error(data.message || '获取的牌数不足52张');
+                throw new Error(data.message || '从服务器获取的牌数据格式不正确');
             }
-        } catch(e) {
-            // 使用alert()来显示错误信息，方便在移动设备上调试
-            alert(`发牌失败: ${e.message}`);
-            console.error("发牌失败:", e);
+        } catch (e) {
+            const errorMessage = `发牌失败: ${e.message}
+
+请检查：
+1. 手机网络连接是否正常。
+2. 确保服务器 '9525.ip-ddns.com' 正在运行并且可以从公网访问。
+3. 如果使用https，请确保SSL证书是有效的。`;
+            alert(errorMessage);
+            console.error("发牌失败的详细信息:", e);
         } finally {
             setIsLoading(false);
         }

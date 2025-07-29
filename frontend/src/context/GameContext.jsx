@@ -1,5 +1,6 @@
-import React, { createContext, useState, useContext } from 'react';
+import React, { createContext, useState, useContext, useCallback } from 'react';
 import { getAIBestArrangement, calculateAllScores, sortCardsByRank } from '../utils/thirteenLogic';
+import { dealAndShuffle } from '../utils/deal'; // 【新增】引入前端发牌模块
 
 const GameContext = createContext();
 
@@ -10,36 +11,43 @@ export const GameProvider = ({ children }) => {
     const [isGameActive, setIsGameActive] = useState(false);
     const [comparisonResult, setComparisonResult] = useState(null);
 
-    const startGame = (allCards) => {
-        if (allCards.length !== 52) {
-            console.error("需要52张牌来开始四人游戏");
-            return;
-        }
-
-        const playerHands = [
-            allCards.slice(0, 13),
-            allCards.slice(13, 26),
-            allCards.slice(26, 39),
-            allCards.slice(39, 52),
-        ];
-
-        const playerInitialRows = {
-            front: sortCardsByRank(playerHands[0].slice(0, 3)),
-            middle: sortCardsByRank(playerHands[0].slice(3, 8)),
-            back: sortCardsByRank(playerHands[0].slice(8, 13)),
-        };
-        
+    // 内部函数，用于设置玩家数据和激活游戏
+    const setupGame = (playerHand, ai1Hand, ai2Hand, ai3Hand) => {
         const initialPlayers = [
-            { id: 'player', name: '你', hand: playerHands[0], rows: playerInitialRows, isReady: false },
-            { id: 'ai1', name: '小明', hand: playerHands[1], rows: getAIBestArrangement(playerHands[1]), isReady: true },
-            { id: 'ai2', name: '小红', hand: playerHands[2], rows: getAIBestArrangement(playerHands[2]), isReady: true },
-            { id: 'ai3', name: '小刚', hand: playerHands[3], rows: getAIBestArrangement(playerHands[3]), isReady: true },
+            { id: 'player', name: '你', hand: playerHand, rows: getAIBestArrangement(playerHand), isReady: false },
+            { id: 'ai1', name: '小明', hand: ai1Hand, rows: getAIBestArrangement(ai1Hand), isReady: true },
+            { id: 'ai2', name: '小红', hand: ai2Hand, rows: getAIBestArrangement(ai2Hand), isReady: true },
+            { id: 'ai3', name: '小刚', hand: ai3Hand, rows: getAIBestArrangement(ai3Hand), isReady: true },
         ];
-
         setPlayers(initialPlayers);
         setIsGameActive(true);
         setComparisonResult(null);
     };
+    
+    // 用于【在线模式】的函数
+    const startOnlineGame = (allCards) => {
+        if (allCards && allCards.length === 52) {
+            const hands = {
+                player: allCards.slice(0, 13),
+                ai1: allCards.slice(13, 26),
+                ai2: allCards.slice(26, 39),
+                ai3: allCards.slice(39, 52),
+            };
+            setupGame(hands.player, hands.ai1, hands.ai2, hands.ai3);
+        }
+    };
+    
+    // 【新增】用于【离线试玩模式】的函数
+    const startOfflineGame = useCallback(() => {
+        const hands = dealAndShuffle(); // 调用前端发牌模块
+        setupGame(hands.player, hands.ai1, hands.ai2, hands.ai3);
+    }, []);
+
+    const resetGame = useCallback(() => {
+        setPlayers([]);
+        setIsGameActive(false);
+        setComparisonResult(null);
+    }, []);
     
     const updatePlayerRows = (newRows) => {
          setPlayers(prev => prev.map(p => 
@@ -52,14 +60,12 @@ export const GameProvider = ({ children }) => {
             const player = prev.find(p => p.id === 'player');
             if (player) {
                 const bestRows = getAIBestArrangement(player.hand);
-                // 确保智能分牌后取消玩家的准备状态，因为牌已变动
                 return prev.map(p => p.id === 'player' ? { ...p, rows: bestRows, isReady: false } : p);
             }
             return prev;
         });
     };
 
-    // setPlayerReady现在返回更新后的players数组
     const setPlayerReady = () => {
         let updatedPlayers = [];
         setPlayers(prev => {
@@ -68,14 +74,13 @@ export const GameProvider = ({ children }) => {
             );
             return updatedPlayers;
         });
-        return updatedPlayers; // 返回值，用于同步计算
+        return updatedPlayers;
     };
     
-    // calculateResults现在接收players作为参数，避免异步问题
     const calculateResults = (currentPlayers) => {
         if (currentPlayers.every(p => p.isReady)) {
             const results = calculateAllScores(currentPlayers);
-            setComparisonResult(results); // 更新全局状态
+            setComparisonResult(results);
             return true;
         }
         return false;
@@ -85,7 +90,9 @@ export const GameProvider = ({ children }) => {
         players,
         isGameActive,
         comparisonResult,
-        startGame,
+        startOnlineGame, // 导出在线模式函数
+        startOfflineGame, // 导出离线模式函数
+        resetGame,
         updatePlayerRows,
         autoArrangePlayerHand,
         setPlayerReady,

@@ -3,9 +3,8 @@ import ReactDOM from 'react-dom/client';
 import App from './App.jsx';
 import './index.css';
 import { CssBaseline, ThemeProvider, createTheme } from '@mui/material';
-// 【核心修正】: 引入 HashRouter 而不是 BrowserRouter
 import { HashRouter } from 'react-router-dom';
-import { GameProvider } from './context/GameContext';
+// 【核心重构】: GameProvider 已被移动到各自的布局中，这里不再需要
 
 const darkTheme = createTheme({
   palette: {
@@ -20,11 +19,8 @@ ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <ThemeProvider theme={darkTheme}>
       <CssBaseline />
-      {/* 【核心修正】: 在这里使用 HashRouter */}
       <HashRouter>
-        <GameProvider>
-          <App />
-        </GameProvider>
+        <App />
       </HashRouter>
     </ThemeProvider>
   </React.StrictMode>,

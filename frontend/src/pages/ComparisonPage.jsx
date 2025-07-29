@@ -1,16 +1,15 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Box, Typography, Button, Paper } from '@mui/material';
 import { useGame } from '../context/GameContext';
-import '../styles/App.css'; // 确保样式被引入
+import '../styles/App.css'; 
 
-// 单张扑克牌的小组件
 const MiniCard = ({ card, zIndex }) => (
   <img 
     src={`/assets/cards/${card.id}.svg`} 
     alt={card.displayName}
     style={{
-      width: '80px', // 固定宽度
+      width: '80px',
       height: 'auto',
       position: 'absolute',
       zIndex: zIndex,
@@ -20,14 +19,13 @@ const MiniCard = ({ card, zIndex }) => (
   />
 );
 
-// 堆叠牌的组件
 const StackedHand = ({ cards }) => {
   if (!cards || cards.length === 0) return null;
   return (
     <Box sx={{ 
       position: 'relative', 
-      width: '80px', // 与MiniCard宽度一致
-      height: '112px', // 大约是卡片的高度
+      width: '80px',
+      height: '112px',
       display: 'flex', 
       alignItems: 'center', 
       justifyContent: 'center' 
@@ -39,24 +37,33 @@ const StackedHand = ({ cards }) => {
   );
 };
 
-// 【核心重构】: 整个比牌页面
 const ComparisonPage = () => {
   const navigate = useNavigate();
-  const { comparisonResult, players } = useGame();
+  const { comparisonResult, players, resetGame } = useGame();
 
-  // 当没有比牌结果时，提供一个返回按钮
+  // 在组件卸载时调用 resetGame，确保状态被清理
+  useEffect(() => {
+    return () => {
+      resetGame();
+    };
+  }, [resetGame]);
+
+  const handleReturnHome = () => {
+    // 在导航前，不需要手动调用resetGame，因为卸载时会自动调用
+    navigate('/'); 
+  };
+  
   if (!comparisonResult) {
     return (
       <Box className="page-container">
         <Typography variant="h5" color="white" gutterBottom>
           没有比牌结果可显示。
         </Typography>
-        <Button variant="contained" onClick={() => navigate('/thirteen')}>返回游戏</Button>
+        <Button variant="contained" onClick={handleReturnHome}>返回主页</Button>
       </Box>
     );
   }
 
-  // 为每个玩家补充完整的牌型和牌面信息
   const enrichedPlayers = useMemo(() => {
     return players.map(player => {
       const result = comparisonResult.scores.find(s => s.playerId === player.id) || {};
@@ -78,8 +85,8 @@ const ComparisonPage = () => {
         height: '100vh',
         width: '100vw',
         background: 'radial-gradient(circle, #2c4a3b 0%, #1a2a28 100%)',
-        overflow: 'hidden', // 确保无滚动条
-        p: 2, // 页面内边距
+        overflow: 'hidden',
+        p: 2,
         boxSizing: 'border-box'
       }}
     >
@@ -87,7 +94,6 @@ const ComparisonPage = () => {
         比牌结果
       </Typography>
 
-      {/* 田字格布局容器 */}
       <Box 
         sx={{
           flexGrow: 1,
@@ -109,10 +115,9 @@ const ComparisonPage = () => {
               background: 'rgba(255, 255, 255, 0.05)',
               border: `2px solid ${player.totalScore > 0 ? '#4caf50' : (player.totalScore < 0 ? '#f44336' : 'rgba(255,255,255,0.2)')}`,
               color: 'white',
-              overflow: 'hidden' // 确保内部内容不溢出
+              overflow: 'hidden'
             }}
           >
-            {/* 玩家信息 */}
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
               <Typography variant="h6">{player.name}</Typography>
               <Typography variant="h6" sx={{ color: player.totalScore > 0 ? '#66bb6a' : (player.totalScore < 0 ? '#ef5350' : 'white')}}>
@@ -120,7 +125,6 @@ const ComparisonPage = () => {
               </Typography>
             </Box>
 
-            {/* 三道牌展示 */}
             <Box sx={{ flexGrow: 1, display: 'flex', justifyContent: 'space-around', alignItems: 'center' }}>
               <Box>
                 <Typography variant="caption" display="block" align="center" gutterBottom>头道</Typography>
@@ -142,10 +146,9 @@ const ComparisonPage = () => {
         ))}
       </Box>
 
-      {/* 底部按钮 */}
       <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
-        <Button variant="contained" size="large" onClick={() => navigate('/thirteen')}>
-          再来一局
+        <Button variant="contained" size="large" onClick={handleReturnHome}>
+          返回主页
         </Button>
       </Box>
     </Box>

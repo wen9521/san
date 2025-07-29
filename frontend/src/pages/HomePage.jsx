@@ -1,43 +1,85 @@
 import React from 'react';
-import { Box, Typography, Button, Container } from '@mui/material';
-import { Link } from 'react-router-dom';
-import StyleIcon from '@mui/icons-material/Style';
-import '../styles/App.css';
+import { Box, Typography, Button, Paper, Grid } from '@mui/material';
+import { useNavigate } from 'react-router-dom';
 
 const HomePage = () => {
+  const navigate = useNavigate();
+
+  // 【核心重构】: 导航函数现在只负责跳转和传递信号
+  const handleThirteenOfflinePlay = () => {
+    navigate('/thirteen/play', { state: { mode: 'offline' } });
+  };
+  
+  const handleEightOfflinePlay = () => {
+    navigate('/eight/play'); // 八张游戏目前默认就是离线模式
+  };
+
   return (
-    // 使用 Box 作为最外层容器，并设置 flex 布局使其内容垂直和水平居中
     <Box
       sx={{
         display: 'flex',
-        flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
         minHeight: '100vh',
-        p: 2, // 添加一些内边距
+        background: 'radial-gradient(circle, #3a5a40 0%, #1e2d2b 100%)',
+        p: 2,
       }}
     >
-      <Box className="home-menu glass-effect">
-        <StyleIcon sx={{ fontSize: 60, color: 'primary.main' }} />
-        <Typography variant="h2" component="h1" gutterBottom sx={{ fontWeight: 'bold' }}>
-          扑克游戏中心
-        </Typography>
-        <Typography variant="body1" color="secondary" sx={{ mb: 4 }}>
-          请选择您想玩的游戏
-        </Typography>
+      <Grid container spacing={4} sx={{ maxWidth: '1200px' }}>
+        {/* 十三张板块 */}
+        <Grid item xs={12} md={6}>
+          <Paper
+            elevation={6}
+            sx={{
+              p: 4,
+              textAlign: 'center',
+              background: 'rgba(255, 255, 255, 0.08)',
+              border: '1px solid rgba(255, 255, 255, 0.15)',
+              color: 'white',
+              backdropFilter: 'blur(10px)',
+            }}
+          >
+            <Typography variant="h3" gutterBottom sx={{ fontWeight: 'bold', color: '#ffd700' }}>
+              十三张
+            </Typography>
+            <Box sx={{ mt: 3, display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <Button variant="contained" color="primary" size="large" onClick={handleThirteenOfflinePlay}>
+                试玩
+              </Button>
+              <Button variant="outlined" color="secondary" size="large" onClick={() => navigate('/rooms')}>
+                选择房间
+              </Button>
+            </Box>
+          </Paper>
+        </Grid>
 
-        <Link to="/thirteen" style={{ textDecoration: 'none', width: '100%' }}>
-          <Button variant="contained" color="primary" size="large" fullWidth>
-            十三张
-          </Button>
-        </Link>
-
-        <Link to="/eight" style={{ textDecoration: 'none', width: '100%', marginTop: '1rem' }}>
-          <Button variant="outlined" color="secondary" size="large" fullWidth>
-            八张（开发中）
-          </Button>
-        </Link>
-      </Box>
+        {/* 八张板块 */}
+        <Grid item xs={12} md={6}>
+          <Paper
+            elevation={6}
+            sx={{
+              p: 4,
+              textAlign: 'center',
+              background: 'rgba(255, 255, 255, 0.08)',
+              border: '1px solid rgba(255, 255, 255, 0.15)',
+              color: 'white',
+              backdropFilter: 'blur(10px)',
+            }}
+          >
+            <Typography variant="h3" gutterBottom sx={{ fontWeight: 'bold', color: '#4dd0e1' }}>
+              八张
+            </Typography>
+            <Box sx={{ mt: 3, display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <Button variant="contained" sx={{ backgroundColor: '#0097a7', '&:hover': {backgroundColor: '#00838f'} }} size="large" onClick={handleEightOfflinePlay}>
+                试玩
+              </Button>
+               <Button variant="outlined" color="secondary" size="large" disabled>
+                选择房间
+              </Button>
+            </Box>
+          </Paper>
+        </Grid>
+      </Grid>
     </Box>
   );
 };

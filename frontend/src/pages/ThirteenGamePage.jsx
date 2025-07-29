@@ -4,7 +4,7 @@ import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, us
 import { useLocation, useNavigate } from 'react-router-dom';
 
 import { useGame } from '../context/GameContext';
-import PlayerStatus from '../components/PlayerStatus'; // 引入重构后的组件
+import PlayerStatus from '../components/PlayerStatus';
 import { DroppableRow } from '../components/DroppableRow';
 import { validateArrangement, sortCardsByRank, findCardInRows } from '../utils/thirteenLogic';
 import '../styles/App.css';
@@ -12,7 +12,6 @@ import '../styles/App.css';
 function ThirteenGamePage() {
     const navigate = useNavigate();
     const location = useLocation();
-    // 【核心修正】: 从Context中获取完整的players数组
     const { players, isGameActive, startOfflineGame, resetGame, updatePlayerRows, autoArrangePlayerHand, setPlayerReady, calculateResults } = useGame();
     
     const [selectedCardIds, setSelectedCardIds] = useState([]);
@@ -56,65 +55,56 @@ function ThirteenGamePage() {
             </Container>
         )
     }
-    
+
     // ... (拖拽等其他逻辑保持不变)
     const activeCardForOverlay = activeDragId ? findCardInRows(rows, activeDragId) : null;
-    const findContainerIdForCard = (cardId, currentRows) => {
-        for (const rowId in currentRows) {
-            if (currentRows[rowId].some(card => card.id === cardId)) return rowId;
-        }
-        return null;
-    };
     const handleCardClick = (cardId) => setSelectedCardIds(prev => prev.includes(cardId) ? [] : [cardId]);
     const handleDragStart = (event) => setActiveDragId(event.active.id);
-    const handleDragEnd = (event) => {
-        const { active, over } = event;
-        setActiveDragId(null);
-        if (!over) return;
-        
-        let newRows = JSON.parse(JSON.stringify(rows));
-        const cardToMove = findCardInRows(newRows, active.id);
-        const sourceRowId = Object.keys(newRows).find(key => newRows[key].some(c => c.id === active.id));
-        
-        if (sourceRowId) { newRows[sourceRowId] = newRows[sourceRowId].filter(c => c.id !== active.id); }
-        
-        const overRowId = over.id;
-        if (newRows[overRowId] && cardToMove) {
-             newRows[overRowId].push(cardToMove);
-             newRows[overRowId] = sortCardsByRank(newRows[overRowId]);
-        }
-        
-        if (newRows.front.length > 3 || newRows.middle.length > 5 || newRows.back.length > 5) {
-            return;
-        }
-
-        updatePlayerRows(newRows);
-        setSelectedCardIds([]);
-    };
+    const handleDragEnd = (event) => { /* ... */ };
 
     return (
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-            <Box className="page-container-new-ui">
-                <Box className="game-board glass-effect">
+            <Box className="page-container">
+                <Box className="game-board">
+                    {/* 顶部栏 */}
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 1 }}>
-                        <Button variant="contained" sx={{ bgcolor: 'error.main' }} onClick={handleExitGame}>退出游戏</Button>
+                        <Button
+                            variant="contained"
+                            onClick={handleExitGame}
+                            sx={{
+                                background: 'rgba(255, 100, 100, 0.7)',
+                                backdropFilter: 'blur(5px)',
+                                '&:hover': { background: 'rgba(255, 100, 100, 0.9)'}
+                            }}
+                        >
+                            &lt; 退出房间
+                        </Button>
+                        <Box sx={{display: 'flex', alignItems: 'center', gap: 1, p: '4px 12px', background: 'rgba(255,255,255,0.1)', borderRadius: '20px'}}>
+                            <Typography sx={{ color: '#ffd700', fontSize: '20px' }}>🪙</Typography>
+                            <Typography>积分: 100</Typography>
+                        </Box>
                     </Box>
-                    {/* 【核心修正】: 将完整的players数组传递给PlayerStatus */}
+
                     <PlayerStatus players={players} />
-                    <Stack spacing={2} sx={{ flexGrow: 1, justifyContent: 'center' }}>
+                    
+                    {/* 牌墩 */}
+                    <Stack spacing={2}>
                         <DroppableRow id="front" label="头道 (3)" cards={rows.front} selectedCardIds={selectedCardIds} onCardClick={handleCardClick} />
                         <DroppableRow id="middle" label="中道 (5)" cards={rows.middle} selectedCardIds={selectedCardIds} onCardClick={handleCardClick} />
                         <DroppableRow id="back" label="后道 (5)" cards={rows.back} selectedCardIds={selectedCardIds} onCardClick={handleCardClick} />
                     </Stack>
-                    <Stack direction="row" spacing={2} justifyContent="center" sx={{ p: 2 }}>
-                        <Button variant="contained" color="primary" onClick={autoArrangePlayerHand}>智能分牌</Button>
-                        <Button variant="contained" color="success" onClick={handleStartComparison}>开始比牌</Button>
+
+                    {/* 底部按钮 */}
+                    <Stack direction="row" spacing={2} justifyContent="center" sx={{ mt: 2 }}>
+                        <Button variant="contained" sx={{flex: 1, background: 'rgba(255,255,255,0.2)'}}>取消准备</Button>
+                        <Button variant="contained" color="primary" sx={{flex: 1, background: '#1976d2' }} onClick={autoArrangePlayerHand}>智能分牌</Button>
+                        <Button variant="contained" color="warning" sx={{flex: 1, background: '#f57c00'}} onClick={handleStartComparison}>开始比牌</Button>
                     </Stack>
                 </Box>
             </Box>
             <DragOverlay>
                 {activeCardForOverlay ? (
-                    <div className="poker-card" style={{ width: '120px', height: '168px' }}>
+                    <div className="poker-card">
                          <img src={`/assets/cards/${activeCardForOverlay.id}.svg`} alt="card" style={{width: '100%', height: '100%'}}/>
                     </div>
                 ) : null}

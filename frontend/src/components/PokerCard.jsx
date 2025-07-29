@@ -11,10 +11,12 @@ export const PokerCard = ({ card, isSelected, onClick, width = 90, height = 126 
         boxShadow: isSelected ? '0 0 15px rgba(255, 171, 64, 0.8)' : '0 4px 8px rgba(0,0,0,0.3)',
         borderRadius: '8px',
         cursor: 'pointer',
+        zIndex: 1, // 固定
+        position: 'relative'
     };
 
     const handleClick = (e) => {
-        e.stopPropagation(); // 阻止事件冒泡到父组件(GameRow)
+        e.stopPropagation();
         onClick(card.id);
     };
 

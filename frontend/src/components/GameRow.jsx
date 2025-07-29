@@ -3,50 +3,67 @@ import { Box, Typography } from '@mui/material';
 import { PokerCard } from './PokerCard'; // 使用新的 PokerCard 组件
 
 export const GameRow = ({ id, cards, label, onRowClick, selectedCardIds, onCardClick }) => {
-    const style = {
-        background: 'rgba(255, 255, 255, 0.1)',
-        borderRadius: '12px',
-        minHeight: '140px',
-        display: 'flex',
-        alignItems: 'center',
-        padding: '8px',
-        cursor: 'pointer',
-        transition: 'background-color 0.2s ease',
-        '&:hover': {
-            background: 'rgba(0, 255, 0, 0.15)',
-        }
-    };
-
-    // 八张/十三张自适应宽度，head 2/3, middle/back 3/5
-    // 这里简单判断下 label 或 cards.length
-    let cardWidth = 90, cardHeight = 126;
-    if (cards.length <= 3 || /八张|2|头道/.test(label)) {
-        cardWidth = 60;
-        cardHeight = 84;
-    }
+    const CARD_WIDTH = 90;
+    const CARD_HEIGHT = 126;
+    const OVERLAP = 40;
 
     return (
         <Box 
-            sx={style}
+            sx={{
+                background: 'rgba(255, 255, 255, 0.1)',
+                borderRadius: '12px',
+                minHeight: `${CARD_HEIGHT + 20}px`,
+                display: 'flex',
+                alignItems: 'center',
+                padding: '8px',
+                cursor: 'pointer',
+                transition: 'background-color 0.2s ease',
+                '&:hover': {
+                    background: 'rgba(0, 255, 0, 0.15)',
+                }
+            }}
             onClick={() => onRowClick(id)}
         >
-            <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center' }}>
+            <Box
+                sx={{
+                    flexGrow: 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    minWidth: `${CARD_WIDTH * 4.5}px`,
+                    position: 'relative',
+                    maxWidth: `${CARD_WIDTH * 7 - CARD_WIDTH / 2}px`,
+                    overflow: 'visible',
+                }}
+            >
                 {cards.map((card, index) => (
                     <Box 
                         key={card.id}
-                        sx={{ marginLeft: index > 0 ? '-40px' : 0 }}
+                        sx={{
+                            marginLeft: index > 0 ? `-${OVERLAP}px` : 0,
+                            zIndex: 1, // 所有牌同层，选中不会盖住后面
+                            position: 'relative',
+                            transition: 'margin-left 0.2s',
+                        }}
                     >
                         <PokerCard 
                             card={card} 
-                            isSelected={selectedCardIds.includes(card.id)} 
+                            isSelected={selectedCardIds?.includes(card.id)} 
                             onClick={onCardClick}
-                            width={cardWidth}
-                            height={cardHeight}
+                            width={CARD_WIDTH}
+                            height={CARD_HEIGHT}
                         />
                     </Box>
                 ))}
+                {/* 右侧保留半张宽度 */}
+                <Box
+                    sx={{
+                        width: `${CARD_WIDTH / 2}px`,
+                        height: `${CARD_HEIGHT}px`,
+                        flexShrink: 0,
+                        opacity: 0,
+                    }}
+                />
             </Box>
-            
             <Box sx={{ width: '80px', textAlign: 'center', color: 'white', flexShrink: 0 }}>
                 <Typography variant="h6">{label}</Typography>
             </Box>

@@ -1,6 +1,6 @@
 import React, { createContext, useState, useContext, useCallback } from 'react';
 import { getAIBestArrangement, calculateAllScores, sortCardsByRank } from '../utils/thirteenLogic';
-import { dealAndShuffle } from '../utils/deal'; // 【新增】引入前端发牌模块
+import { dealAndShuffle } from '../utils/deal';
 
 const GameContext = createContext();
 
@@ -39,7 +39,7 @@ export const GameProvider = ({ children }) => {
     
     // 【新增】用于【离线试玩模式】的函数
     const startOfflineGame = useCallback(() => {
-        const hands = dealAndShuffle(); // 调用前端发牌模块
+        const hands = dealAndShuffle();
         setupGame(hands.player, hands.ai1, hands.ai2, hands.ai3);
     }, []);
 
@@ -86,17 +86,36 @@ export const GameProvider = ({ children }) => {
         return false;
     };
 
+    // 关键：实现 startComparison
+    const startComparison = () => {
+        let updatedPlayers = [];
+        setPlayers(prev => {
+            updatedPlayers = prev.map(p => 
+                p.id === 'player' ? { ...p, isReady: true } : p
+            );
+            return updatedPlayers;
+        });
+        const allPlayers = updatedPlayers.length > 0 ? updatedPlayers : players;
+        if (allPlayers.every(p => p.isReady)) {
+            const results = calculateAllScores(allPlayers);
+            setComparisonResult(results);
+            return { success: true };
+        }
+        return { success: false, message: "请等待所有玩家准备好" };
+    };
+
     const value = {
         players,
         isGameActive,
         comparisonResult,
-        startOnlineGame, // 导出在线模式函数
-        startOfflineGame, // 导出离线模式函数
+        startOnlineGame,
+        startOfflineGame,
         resetGame,
         updatePlayerRows,
         autoArrangePlayerHand,
         setPlayerReady,
         calculateResults,
+        startComparison,
     };
 
     return <GameContext.Provider value={value}>{children}</GameContext.Provider>;

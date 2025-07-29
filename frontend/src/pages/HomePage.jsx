@@ -89,7 +89,7 @@ const HomePage = () => {
               十三张
             </Typography>
             <Box sx={{ mt: 3, display: 'flex', flexDirection: 'column', gap: 2 }}>
-              <Button variant="contained" color="primary" size="large" onClick={() => navigate('/thirteen/play', { state: { mode: 'offline' } })}>+
+              <Button variant="contained" color="primary" size="large" onClick={() => navigate('/thirteen/play', { state: { mode: 'offline' } })}>
                 试玩
               </Button>
               <Button variant="outlined" color="secondary" size="large" onClick={() => navigate('/rooms')}>
@@ -115,7 +115,7 @@ const HomePage = () => {
               八张
             </Typography>
             <Box sx={{ mt: 3, display: 'flex', flexDirection: 'column', gap: 2 }}>
-              <Button variant="contained" sx={{ backgroundColor: '#0097a7', '&:hover': {backgroundColor: '#00838f'} }} size="large" onClick={() => navigate('/eight/play')}>+
+              <Button variant="contained" sx={{ backgroundColor: '#0097a7', '&:hover': {backgroundColor: '#00838f'} }} size="large" onClick={() => navigate('/eight/play')}>
                 试玩
               </Button>
               <Button variant="outlined" color="secondary" size="large" disabled>

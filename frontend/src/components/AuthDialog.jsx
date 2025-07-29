@@ -1,6 +1,6 @@
 import React, { useState, useContext } from 'react';
 import { Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, Tabs, Tab, Box, Typography } from '@mui/material';
-import { AuthContext } from '../context/AuthContext';
+import { AuthContext } from '../context/AuthContext.jsx';
 
 const phonePattern = /^1d{10}$/; // 仅允许中国大陆手机号
 

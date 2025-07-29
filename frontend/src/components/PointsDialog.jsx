@@ -1,6 +1,6 @@
 import React, { useContext, useState } from 'react';
 import { Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, Typography, Box } from '@mui/material';
-import { AuthContext } from '../context/AuthContext';
+import { AuthContext } from '../context/AuthContext.jsx';
 
 const PointsDialog = ({ open, onClose }) => {
   const { user, searchUserByPhone, transferPoints } = useContext(AuthContext);

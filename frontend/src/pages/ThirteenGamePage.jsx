@@ -22,13 +22,17 @@ function ThirteenGamePage() {
     const validationResult = player ? validateArrangement(player.rows) : null;
 
     useEffect(() => {
+        // 【核心修正】: 确保只在组件初次加载时根据模式启动游戏
         if (location.state?.mode === 'offline') {
             startOfflineGame();
         }
+        
+        // 返回一个清理函数，这个函数只在组件卸载时执行
         return () => {
             resetGame();
         };
-    }, [location.state, startOfflineGame, resetGame]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []); // 【核心修正】: 使用空的依赖项数组确保 effect 只运行一次
 
     const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
 
@@ -66,7 +70,7 @@ function ThirteenGamePage() {
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
             <Box className="page-container">
                 <Box className="game-board">
-                    {/* 顶部栏 */}
+                    {/* ... (UI结构保持不变) ... */}
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 1 }}>
                         <Button
                             variant="contained"
@@ -84,17 +88,12 @@ function ThirteenGamePage() {
                             <Typography>积分: 100</Typography>
                         </Box>
                     </Box>
-
                     <PlayerStatus players={players} />
-                    
-                    {/* 牌墩 */}
                     <Stack spacing={2}>
                         <DroppableRow id="front" label="头道 (3)" cards={rows.front} selectedCardIds={selectedCardIds} onCardClick={handleCardClick} />
                         <DroppableRow id="middle" label="中道 (5)" cards={rows.middle} selectedCardIds={selectedCardIds} onCardClick={handleCardClick} />
                         <DroppableRow id="back" label="后道 (5)" cards={rows.back} selectedCardIds={selectedCardIds} onCardClick={handleCardClick} />
                     </Stack>
-
-                    {/* 底部按钮 */}
                     <Stack direction="row" spacing={2} justifyContent="center" sx={{ mt: 2 }}>
                         <Button variant="contained" sx={{flex: 1, background: 'rgba(255,255,255,0.2)'}}>取消准备</Button>
                         <Button variant="contained" color="primary" sx={{flex: 1, background: '#1976d2' }} onClick={autoArrangePlayerHand}>智能分牌</Button>

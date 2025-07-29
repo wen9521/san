@@ -12,14 +12,12 @@ const dealCardsForEightGame = () => {
     let deck = [];
     for (const suit of suits) {
         for (const rank of ranks) {
-            // 为卡片添加一个数值，方便排序和AI评估
             const value = ranks.indexOf(rank) + 2;
             deck.push({ id: `${rank}_of_${suit}`, suit, rank, value });
         }
     }
-    deck = deck.sort(() => Math.random() - 0.5).slice(0, 48); // 洗牌并取48张
+    deck = deck.sort(() => Math.random() - 0.5).slice(0, 48);
 
-    // 发给6个玩家
     const hands = [];
     for(let i=0; i<6; i++) {
         hands.push(deck.slice(i * 8, (i + 1) * 8));
@@ -33,19 +31,19 @@ export const EightGameProvider = ({ children }) => {
     const [isGameActive, setIsGameActive] = useState(false);
     const [comparisonResult, setComparisonResult] = useState(null);
 
-    const startGame = () => {
+    // 【核心修正】: 使用 useCallback 稳定函数引用，打破无限循环
+    const startGame = useCallback(() => {
         const hands = dealCardsForEightGame();
 
         const playerInitialRows = {
             front: [],
-            middle: sortCardsByRank(hands[0]), // 玩家的8张牌初始全在中道
+            middle: sortCardsByRank(hands[0]),
             back: []
         };
         
         const initialPlayers = [
             { id: 'player', name: '你', hand: hands[0], rows: playerInitialRows, isReady: false },
         ];
-        // 创建5个AI玩家
         for(let i=1; i<6; i++) {
             initialPlayers.push({
                 id: `ai${i}`,
@@ -59,7 +57,7 @@ export const EightGameProvider = ({ children }) => {
         setPlayers(initialPlayers);
         setIsGameActive(true);
         setComparisonResult(null);
-    };
+    }, []);
 
     const resetGame = useCallback(() => {
         setPlayers([]);
@@ -83,8 +81,6 @@ export const EightGameProvider = ({ children }) => {
         });
     };
     
-    // ... 未来可以添加比牌计分等逻辑 ...
-
     const value = {
         players,
         isGameActive,

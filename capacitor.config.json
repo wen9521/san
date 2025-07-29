@@ -1,6 +1,16 @@
 {
-  "appId": "com.example.pokergame",
-  "appName": "扑克游戏",
-  "webDir": "frontend/dist",
-  "bundledWebRuntime": false
+  "appId": "com.wen9521.thirteenpoker",
+  "appName": "扑克王",
+  "webDir": "dist",
+  "android": {
+    "path": "../android"
+  },
+  "server": {
+    "androidScheme": "https",
+    "cleartext": true,
+    "hostname": "localhost",
+    "allowNavigation": [
+      "9525.ip-ddns.com"
+    ]
+  }
 }

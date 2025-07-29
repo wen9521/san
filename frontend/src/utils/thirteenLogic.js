@@ -156,7 +156,7 @@ function isFlush(cards) {
   return cards.every(c => c.suit === firstSuit);
 }
 
-function compareArea(a, b, area) {
+export function compareArea(a, b, area) {
   const typeA = getAreaType(a, area);
   const typeB = getAreaType(b, area);
   const rankA = areaTypeRank(typeA, area);

@@ -1,21 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Button, Box, Stack, Typography, CircularProgress, Container } from '@mui/material';
-import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragOverlay } from '@dnd-kit/core';
 import { useNavigate } from 'react-router-dom';
 
 import { useEightGame } from '../context/EightGameContext'; 
-import PlayerStatus from '../components/PlayerStatus'; // 引入重构后的组件
-import { DroppableRow } from '../components/DroppableRow';
-import { validateEightArrangement, sortCardsByRank, findCardInRows } from '../utils/eightLogic';
+import PlayerStatus from '../components/PlayerStatus';
+import { GameRow } from '../components/GameRow'; // 使用新的 GameRow 组件
+import { validateEightArrangement, sortCardsByRank } from '../utils/eightLogic';
 import '../styles/App.css';
 
 function EightGamePage() {
     const navigate = useNavigate();
-    // 【核心修正】: 从Context获取完整的players数组
     const { players, isGameActive, startGame, resetGame, updatePlayerRows, autoArrangePlayerHand } = useEightGame();
     
     const [selectedCardIds, setSelectedCardIds] = useState([]);
-    const [activeDragId, setActiveDragId] = useState(null);
 
     const player = players.find(p => p.id === 'player');
     const rows = player?.rows || { front: [], middle: [], back: [] };
@@ -27,8 +24,6 @@ function EightGamePage() {
         };
     }, [startGame, resetGame]);
 
-    const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
-
     const handleStartComparison = () => {
         const validationResult = validateEightArrangement(rows);
         if (validationResult.isValid) {
@@ -38,34 +33,42 @@ function EightGamePage() {
         }
     };
 
-    // ... (拖拽等其他逻辑保持不变)
-    const handleDragEnd = (event) => {
-        const { active, over } = event;
-        setActiveDragId(null);
-        if (!over || !player) return;
-        
-        const currentRows = player.rows;
-        let newRows = JSON.parse(JSON.stringify(currentRows));
-        
-        const sourceRowId = Object.keys(currentRows).find(key => currentRows[key].some(c => c.id === active.id));
-        const cardToMove = sourceRowId ? currentRows[sourceRowId].find(c => c.id === active.id) : null;
+    const handleCardClick = useCallback((cardId) => {
+        setSelectedCardIds(prev => {
+            if (prev.includes(cardId)) {
+                return prev.filter(id => id !== cardId);
+            } else {
+                return [...prev, cardId];
+            }
+        });
+    }, []);
 
-        if (!sourceRowId || !cardToMove) return;
+    const handleRowClick = useCallback((targetRowId) => {
+        if (selectedCardIds.length === 0) return;
 
-        newRows[sourceRowId] = newRows[sourceRowId].filter(c => c.id !== active.id);
-        
-        const overRowId = over.id in newRows ? over.id : Object.keys(newRows).find(key => newRows[key].some(c => c.id === over.id));
-        if (newRows[overRowId]) {
-             newRows[overRowId].push(cardToMove);
-             newRows[overRowId] = sortCardsByRank(newRows[overRowId]);
-        }
-        
+        let newRows = JSON.parse(JSON.stringify(rows));
+        let movedCards = [];
+
+        selectedCardIds.forEach(cardId => {
+            let foundCard = null;
+            for (const rowId in newRows) {
+                const index = newRows[rowId].findIndex(c => c.id === cardId);
+                if (index !== -1) {
+                    foundCard = newRows[rowId][index];
+                    newRows[rowId].splice(index, 1);
+                    break;
+                }
+            }
+            if (foundCard) {
+                movedCards.push(foundCard);
+            }
+        });
+
+        newRows[targetRowId] = sortCardsByRank([...newRows[targetRowId], ...movedCards]);
+
         updatePlayerRows(newRows);
         setSelectedCardIds([]);
-    };
-    const handleDragStart = (event) => setActiveDragId(event.active.id);
-    const handleCardClick = (cardId) => setSelectedCardIds(prev => prev.includes(cardId) ? [] : [cardId]);
-    const activeCardForOverlay = activeDragId ? findCardInRows(rows, activeDragId) : null;
+    }, [selectedCardIds, rows, updatePlayerRows]);
 
     if (!isGameActive || !player) {
         return (
@@ -77,33 +80,23 @@ function EightGamePage() {
     }
 
     return (
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-            <Box className="page-container-new-ui">
-                <Box className="game-board glass-effect">
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 1 }}>
-                        <Button variant="contained" sx={{ bgcolor: 'error.main' }} onClick={() => navigate('/')}>退出游戏</Button>
-                    </Box>
-                    {/* 【核心修正】: 将完整的players数组传递给PlayerStatus */}
-                    <PlayerStatus players={players} />
-                    <Stack spacing={2} sx={{ flexGrow: 1, justifyContent: 'center' }}>
-                        <DroppableRow id="front" label="头道 (2)" cards={rows.front} selectedCardIds={selectedCardIds} onCardClick={handleCardClick} />
-                        <DroppableRow id="middle" label="中道 (3)" cards={rows.middle} selectedCardIds={selectedCardIds} onCardClick={handleCardClick} />
-                        <DroppableRow id="back" label="后道 (3)" cards={rows.back} selectedCardIds={selectedCardIds} onCardClick={handleCardClick} />
-                    </Stack>
-                    <Stack direction="row" spacing={2} justifyContent="center" sx={{ p: 2 }}>
-                        <Button variant="contained" color="primary" onClick={autoArrangePlayerHand}>智能分牌</Button>
-                        <Button variant="contained" color="success" onClick={handleStartComparison}>开始比牌</Button>
-                    </Stack>
+        <Box className="page-container-new-ui">
+            <Box className="game-board glass-effect">
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 1 }}>
+                    <Button variant="contained" sx={{ bgcolor: 'error.main' }} onClick={() => navigate('/')}>退出游戏</Button>
                 </Box>
+                <PlayerStatus players={players} />
+                <Stack spacing={2} sx={{ flexGrow: 1, justifyContent: 'center' }}>
+                    <GameRow id="front" label="头道 (2)" cards={rows.front} selectedCardIds={selectedCardIds} onCardClick={handleCardClick} onRowClick={handleRowClick} />
+                    <GameRow id="middle" label="中道 (3)" cards={rows.middle} selectedCardIds={selectedCardIds} onCardClick={handleCardClick} onRowClick={handleRowClick} />
+                    <GameRow id="back" label="后道 (3)" cards={rows.back} selectedCardIds={selectedCardIds} onCardClick={handleCardClick} onRowClick={handleRowClick} />
+                </Stack>
+                <Stack direction="row" spacing={2} justifyContent="center" sx={{ p: 2 }}>
+                    <Button variant="contained" color="primary" onClick={autoArrangePlayerHand}>智能分牌</Button>
+                    <Button variant="contained" color="success" onClick={handleStartComparison}>开始比牌</Button>
+                </Stack>
             </Box>
-            <DragOverlay>
-                {activeCardForOverlay ? (
-                    <div className="poker-card" style={{ width: '120px', height: '168px' }}>
-                        <img src={`/assets/cards/${activeCardForOverlay.id}.svg`} alt="card" style={{width: '100%', height: '100%'}}/>
-                    </div>
-                ) : null}
-            </DragOverlay>
-        </DndContext>
+        </Box>
     );
 }
 

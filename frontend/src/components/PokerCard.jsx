@@ -1,26 +1,22 @@
 import React from 'react';
-import '../styles/App.css';
 
-const PokerCard = ({ cardData, index, isSelected, onClick }) => {
-  const imageUrl = `/assets/cards/${cardData.id}.svg`;
-  const totalCards = 13;
-  const middleCardIndex = Math.floor(totalCards / 2);
-  const rotationAngle = (index - middleCardIndex) * 4; // 减小角度，更紧凑
-  const animationDelay = `${index * 0.08}s`;
+export const PokerCard = ({ card, isSelected, onClick }) => {
+    const style = {
+        transform: isSelected ? 'translateY(-15px)' : 'none',
+        transition: 'transform 0.2s ease-in-out',
+        outline: isSelected ? '3px solid #ffab40' : 'none',
+        boxShadow: isSelected ? '0 0 15px rgba(255, 171, 64, 0.8)' : '0 4px 8px rgba(0,0,0,0.3)',
+        borderRadius: '8px',
+        cursor: 'pointer',
+    };
 
-  const cardStyle = {
-    '--rotation': `${rotationAngle}deg`,
-    '--delay': animationDelay,
-    zIndex: index,
-  };
-
-  const className = `poker-card ${isSelected ? 'selected' : ''}`;
-  
-  return (
-    <div className={className} style={cardStyle} title={cardData.displayName} onClick={onClick}>
-      <img src={imageUrl} alt={cardData.displayName} />
-    </div>
-  );
+    return (
+        <div 
+            style={style} 
+            className="poker-card"
+            onClick={() => onClick(card.id)}
+        >
+            <img src={`/assets/cards/${card.id}.svg`} alt={card.id} style={{ width: '100%', height: '100%' }} />
+        </div>
+    );
 };
-
-export default PokerCard;

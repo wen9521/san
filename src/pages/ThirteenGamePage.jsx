@@ -12,15 +12,15 @@ import '../styles/App.css';
 function ThirteenGamePage() {
     const navigate = useNavigate();
     const location = useLocation();
-    const { players, isGameActive, startOfflineGame, resetGame, updatePlayerRows, autoArrangePlayerHand, setPlayerReady, calculateResults } = useGame();
+    // 【核心重构】: 移除 setPlayerReady 和 calculateResults, 引入 startComparison
+    const { players, isGameActive, startOfflineGame, resetGame, updatePlayerRows, autoArrangePlayerHand, startComparison } = useGame();
     
     const [selectedCardIds, setSelectedCardIds] = useState([]);
     const [activeDragId, setActiveDragId] = useState(null);
     
     const player = players.find(p => p.id === 'player');
     const rows = player?.rows || { front: [], middle: [], back: [] };
-    const validationResult = player ? validateArrangement(player.rows) : null;
-
+    
     useEffect(() => {
         if (location.state?.mode === 'offline') {
             startOfflineGame();
@@ -38,14 +38,13 @@ function ThirteenGamePage() {
         navigate('/');
     };
     
+    // 【核心重构】: 简化比牌处理逻辑
     const handleStartComparison = () => {
-        if (validationResult?.isValid) {
-            const updatedPlayers = setPlayerReady();
-            if (calculateResults(updatedPlayers)) {
-                navigate('/thirteen/comparison');
-            }
+        const result = startComparison();
+        if (result.success) {
+            navigate('/thirteen/comparison');
         } else {
-            alert(validationResult?.message || "牌型不合法，请调整后再试。");
+            alert(result.message || "牌型不合法，请调整后再试。");
         }
     };
     
@@ -58,11 +57,10 @@ function ThirteenGamePage() {
         )
     }
 
-    // ... (拖拽等其他逻辑保持不变)
     const activeCardForOverlay = activeDragId ? findCardInRows(rows, activeDragId) : null;
     const handleCardClick = (cardId) => setSelectedCardIds(prev => prev.includes(cardId) ? [] : [cardId]);
     const handleDragStart = (event) => setActiveDragId(event.active.id);
-    const handleDragEnd = (event) => { 
+    const handleDragEnd = (event) => {
         const { active, over } = event;
         setActiveDragId(null);
         if (!over || !player) return;
@@ -89,18 +87,13 @@ function ThirteenGamePage() {
 
     return (
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-            {/* 【核心修改 1】: 将 page-container 替换为 page-container-new-ui 以实现全屏布局 */}
             <Box className="page-container-new-ui">
-                {/* 【核心修改 2】: 增加 glass-effect 类以获得毛玻璃背景效果 */}
                 <Box className="game-board glass-effect">
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 1 }}>
                         <Button
                             variant="contained"
                             onClick={handleExitGame}
-                            sx={{
-                                bgcolor: 'error.main', // 使用主题颜色更统一
-                                '&:hover': { bgcolor: 'error.dark' }
-                            }}
+                            sx={{ bgcolor: 'error.main', '&:hover': { bgcolor: 'error.dark' } }}
                         >
                             退出游戏
                         </Button>
@@ -109,15 +102,12 @@ function ThirteenGamePage() {
                             <Typography>积分: 100</Typography>
                         </Box>
                     </Box>
-
                     <PlayerStatus players={players} />
-
                     <Stack spacing={2} sx={{ flexGrow: 1, justifyContent: 'center' }}>
                         <DroppableRow id="front" label="头道 (3)" cards={rows.front} selectedCardIds={selectedCardIds} onCardClick={handleCardClick} />
                         <DroppableRow id="middle" label="中道 (5)" cards={rows.middle} selectedCardIds={selectedCardIds} onCardClick={handleCardClick} />
                         <DroppableRow id="back" label="后道 (5)" cards={rows.back} selectedCardIds={selectedCardIds} onCardClick={handleCardClick} />
                     </Stack>
-                    
                     <Stack direction="row" spacing={2} justifyContent="center" sx={{ p: 2 }}>
                         <Button variant="contained" color="primary" onClick={autoArrangePlayerHand}>智能分牌</Button>
                         <Button variant="contained" color="success" onClick={handleStartComparison}>开始比牌</Button>

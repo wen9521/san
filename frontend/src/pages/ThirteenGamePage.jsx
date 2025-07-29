@@ -16,18 +16,14 @@ function ThirteenGamePage() {
     const navigate = useNavigate();
     const { players, isGameActive, startGame, updatePlayerRows, autoArrangePlayerHand, setPlayerReady, calculateResults } = useGame();
     
-    // 【终极修正 1】: 只保留与UI交互直接相关的、临时的本地状态。
-    // 所有核心数据（牌的位置）都从 context 中获取。
     const [selectedCardIds, setSelectedCardIds] = useState([]);
     const [activeDragId, setActiveDragId] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
     
-    // 从 context 中派生出当前玩家的数据，这是唯一的数据源。
     const player = players.find(p => p.id === 'player');
-    const rows = player?.rows || { front: [], middle: [], back: [] }; // 如果player不存在，提供默认空值
+    const rows = player?.rows || { front: [], middle: [], back: [] };
     const validationResult = player ? validateArrangement(player.rows) : null;
 
-    // 【终极修正 2】: 传感器配置，这是正确的。
     const sensors = useSensors(
         useSensor(PointerSensor, {
             activationConstraint: {
@@ -41,20 +37,26 @@ function ThirteenGamePage() {
         setIsLoading(true);
         try {
             const response = await fetch(API_URL);
+            if (!response.ok) {
+                // 如果HTTP响应状态码不是2xx, 抛出错误
+                throw new Error(`网络错误: ${response.status} ${response.statusText}`);
+            }
             const data = await response.json();
             if (data.success && data.hand.length === 52) {
                 startGame(data.hand);
             } else {
-                throw new Error('获取的牌数不足52张');
+                // 如果API返回的业务逻辑失败或数据不完整, 抛出错误
+                throw new Error(data.message || '获取的牌数不足52张');
             }
         } catch(e) {
+            // 使用alert()来显示错误信息，方便在移动设备上调试
+            alert(`发牌失败: ${e.message}`);
             console.error("发牌失败:", e);
         } finally {
             setIsLoading(false);
         }
     };
     
-    // 这个函数的功能是根据当前的 rows 状态找到卡片所在的牌墩ID
     const findContainerIdForCard = (cardId, currentRows) => {
         for (const rowId in currentRows) {
             if (currentRows[rowId].some(card => card.id === cardId)) return rowId;
@@ -87,7 +89,6 @@ function ThirteenGamePage() {
             return;
         }
         
-        // 【终极修正 3】: 整个拖拽逻辑在一个函数内完成，使用当前最新的`rows`状态，不依赖任何闭包或异步状态
         const currentRows = player.rows;
         
         const overContainerId = over.id in currentRows ? over.id : findContainerIdForCard(over.id, currentRows);
@@ -124,7 +125,6 @@ function ThirteenGamePage() {
         
         newRows[overContainerId] = sortCardsByRank(newRows[overContainerId]);
         
-        // 一次性调用Context的函数更新全局状态
         updatePlayerRows(newRows);
         setSelectedCardIds([]);
     };

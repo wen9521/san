@@ -1,13 +1,7 @@
-/* 基本重置和全局字体 */
-body {
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  background-color: #121212; /* 确保body背景色为深色 */
-}
+/* 
+  全局的 body 样式已移动到 index.css, 这里不再需要。
+  这个文件现在专注于组件级别的类名。
+*/
 
 /* 页面容器基础样式 */
 .page-container {
@@ -19,14 +13,13 @@ body {
   width: 100%;
   padding: 1rem;
   box-sizing: border-box; /* 确保padding不会撑大宽度 */
-  background: radial-gradient(circle, #3a5a40 0%, #1e2d2b 100%);
+  /* 背景已由 index.css 全局提供 */
 }
-
 
 /* 扑克牌基础样式 */
 .poker-card {
-  width: 120px; /* 增加了宽度 */
-  height: 168px; /* 增加了高度 */
+  width: 120px;
+  height: 168px;
   border-radius: 8px;
   overflow: hidden;
   box-shadow: 0 4px 8px rgba(0,0,0,0.3);
@@ -35,7 +28,7 @@ body {
 }
 .poker-card.selected {
   transform: translateY(-20px);
-  box-shadow: 0 10px 20px rgba(255, 215, 0, 0.5); /* 选中时发光效果 */
+  box-shadow: 0 10px 20px rgba(255, 215, 0, 0.5);
 }
 .poker-card img {
   width: 100%;
@@ -43,40 +36,28 @@ body {
   display: block;
 }
 
-
 /* --- 以下为新版UI样式 --- */
 
-/* 
-  【核心修正】: 游戏页面布局调整
-  - 移除父容器的 padding
-  - 设置高度为 100vh 以完全占满视口
-*/
 .page-container-new-ui {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  height: 100vh; /* 占满整个视口高度 */
-  width: 100vw; /* 占满整个视口宽度 */
-  padding: 0; /* 移除内边距 */
-  background: radial-gradient(circle, #3a5a40 0%, #1e2d2b 100%);
-  overflow: hidden; /* 隐藏任何可能的溢出 */
+  height: 100vh;
+  width: 100vw;
+  padding: 0;
+  /* 背景已由 index.css 全局提供 */
+  overflow: hidden;
 }
 
-/* 
-  【核心修正】: 游戏板布局调整
-  - 移除 max-width 限制
-  - 设置宽高为 100% 以填充父容器
-  - 将 padding 和 box-sizing 应用于此，以控制内部内容
-*/
 .game-board {
   width: 100%;
   height: 100%;
   display: flex;
   flex-direction: column;
-  border-radius: 0; /* 在全屏模式下通常不需要圆角 */
+  border-radius: 0;
   padding: 1rem;
-  box-sizing: border-box; /* 内边距向内计算 */
+  box-sizing: border-box;
   box-shadow: 0 10px 30px rgba(0,0,0,0.5);
   position: relative;
   overflow: hidden;
@@ -87,18 +68,17 @@ body {
   transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
 }
 
-/* 被选中的卡牌，提供一个明显的视觉反馈 */
 .card-in-row.selected {
   transform: translateY(-10px) scale(1.05);
   box-shadow: 0 0 15px 5px rgba(255, 255, 0, 0.7);
-  z-index: 10; /* 确保选中的牌在最上层 */
+  z-index: 10;
 }
 
 .glass-effect {
-  background: rgba(30, 45, 43, 0.6); /* 半透明背景 */
-  backdrop-filter: blur(10px); /* 毛玻璃效果 */
+  background: rgba(30, 45, 43, 0.6);
+  backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1); /* 轻微的边框 */
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 /* 比较页面的样式 */
@@ -117,7 +97,7 @@ body {
   gap: 16px;
   width: 100%;
   max-width: 1200px;
-  height: 90vh; /* 限制高度以避免滚动 */
+  height: 90vh;
 }
 
 .player-card {
@@ -132,7 +112,7 @@ body {
 }
 
 .player-card.winner {
-  border-color: #ffd700; /* 金色边框表示赢家 */
+  border-color: #ffd700;
   box-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
 }
 
@@ -143,6 +123,6 @@ body {
 }
 
 .hand-row-comparison .poker-card {
-  width: 60px; /* 在比较页面上缩小卡片 */
+  width: 60px;
   height: 84px;
 }

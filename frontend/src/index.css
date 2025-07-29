@@ -6,7 +6,7 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   
-  /* 添加一个深邃的渐变背景 */
-  background: linear-gradient(135deg, #1d2b4a, #1a3a1a);
+  /* 【核心修正】: 恢复为经典的牌桌圆形渐变背景 */
+  background: radial-gradient(circle, #3a5a40 0%, #1e2d2b 100%);
   background-attachment: fixed; /* 固定背景，滚动时不移动 */
 }

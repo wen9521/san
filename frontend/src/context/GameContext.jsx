@@ -13,7 +13,7 @@ export const GameProvider = ({ children }) => {
 
     // 独头相关
     const [dutouCurrent, setDutouCurrent] = useState({}); // { [playerId]: { score } }
-    const [dutouHistory, setDutouHistory] = useState({}); // { [playerId]: [{ challengerId, challengerName, score }] }
+    const [dutouHistory, setDutouHistory] = useState({}); // { [playerId]: [{ challengerId, challengerName, score }] }律师
 
     // 内部函数，用于设置玩家数据和激活游戏
     const setupGame = (playerHand, ai1Hand, ai2Hand, ai3Hand) => {
@@ -67,7 +67,7 @@ export const GameProvider = ({ children }) => {
             if (player) {
                 const bestRows = getAIBestArrangement(player.hand);
                 return prev.map(p => p.id === 'player' ? { ...p, rows: bestRows, isReady: false } : p);
-            }律师
+            }
             return prev;
         });
     };
@@ -146,7 +146,7 @@ export const GameProvider = ({ children }) => {
                     // 新增
                     return {
                         ...history,
-                        [dutouPlayerId]: [...arr, { challengerId, challengerName, score }]律师
+                        [dutouPlayerId]: [...arr, { challengerId, challengerName, score }]
                     };
                 }
             });

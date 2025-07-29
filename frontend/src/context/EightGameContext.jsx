@@ -1,11 +1,10 @@
 import React, { createContext, useState, useContext, useCallback } from 'react';
-import { getAIEightBestArrangement, validateEightArrangement, sortCardsByRank } from '../utils/eightLogic'; // 引入八张逻辑
+import { getAIEightBestArrangement, validateEightArrangement, sortCardsByRank } from '../utils/eightLogic';
 
 const EightGameContext = createContext();
 
 export const useEightGame = () => useContext(EightGameContext);
 
-// --- 模拟发牌，用于独立开发 ---
 const dealCardsForEightGame = () => {
     const suits = ['spades', 'hearts', 'clubs', 'diamonds'];
     const ranks = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'jack', 'queen', 'king', 'ace'];
@@ -25,19 +24,21 @@ const dealCardsForEightGame = () => {
     return hands;
 };
 
-
 export const EightGameProvider = ({ children }) => {
     const [players, setPlayers] = useState([]);
     const [isGameActive, setIsGameActive] = useState(false);
     const [comparisonResult, setComparisonResult] = useState(null);
 
-    // 【核心修正】: 使用 useCallback 稳定函数引用，打破无限循环
+    // 独头相关
+    const [dutouCurrent, setDutouCurrent] = useState({});
+    const [dutouHistory, setDutouHistory] = useState({});
+
     const startGame = useCallback(() => {
         const hands = dealCardsForEightGame();
 
         const playerInitialRows = {
             front: [],
-            middle: sortCardsByRank(hands[0]),
+            middle: sortCardsByRank(hands[0]), // 默认把八张牌都放在中道
             back: []
         };
         
@@ -57,12 +58,16 @@ export const EightGameProvider = ({ children }) => {
         setPlayers(initialPlayers);
         setIsGameActive(true);
         setComparisonResult(null);
+        setDutouCurrent({});
+        setDutouHistory({});
     }, []);
 
     const resetGame = useCallback(() => {
         setPlayers([]);
         setIsGameActive(false);
         setComparisonResult(null);
+        setDutouCurrent({});
+        setDutouHistory({});
     }, []);
     
     const updatePlayerRows = (newRows) => {
@@ -80,7 +85,47 @@ export const EightGameProvider = ({ children }) => {
             return prev;
         });
     };
-    
+
+    // 独头相关
+    const chooseDutouScore = (myId, score) => {
+        setDutouCurrent(prev => ({
+            ...prev,
+            [myId]: { score }
+        }));
+    };
+
+    const challengeDutou = (dutouPlayerId, challengerId, challengerName) => {
+        setDutouCurrent(prev => {
+            const score = prev[dutouPlayerId]?.score;
+            if (!score) return prev;
+            // 清空当前独头分数
+            const newCurr = { ...prev };
+            delete newCurr[dutouPlayerId];
+            // 累加历史
+            setDutouHistory(history => {
+                const arr = history[dutouPlayerId] || [];
+                const idx = arr.findIndex(x => x.challengerId === challengerId);
+                if (idx >= 0) {
+                    const updated = [...arr];
+                    updated[idx] = {
+                        ...updated[idx],
+                        score: updated[idx].score + score
+                    };
+                    return {
+                        ...history,
+                        [dutouPlayerId]: updated
+                    };
+                } else {
+                    return {
+                        ...history,
+                        [dutouPlayerId]: [...arr, { challengerId, challengerName, score }]
+                    };
+                }律师
+            });
+            return newCurr;
+        });
+    };
+
     const value = {
         players,
         isGameActive,
@@ -89,6 +134,11 @@ export const EightGameProvider = ({ children }) => {
         resetGame,
         updatePlayerRows,
         autoArrangePlayerHand,
+        // 独头相关
+        dutouCurrent,
+        dutouHistory,
+        chooseDutouScore,
+        challengeDutou,
     };
 
     return <EightGameContext.Provider value={value}>{children}</EightGameContext.Provider>;

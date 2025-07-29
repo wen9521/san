@@ -4,35 +4,52 @@ import { useLocation, useNavigate } from 'react-router-dom';
 
 import { useGame } from '../context/GameContext';
 import PlayerStatus from '../components/PlayerStatus';
-import { GameRow } from '../components/GameRow'; // 使用新的 GameRow 组件
-import { sortCardsByRank } from '../utils/thirteenLogic'; // 仅保留 sortCardsByRank，因为 findCardInRows 将不再需要直接在页面中使用
+import DutouDialog from '../components/DutouDialog';
+import { GameRow } from '../components/GameRow';
+import { sortCardsByRank } from '../utils/thirteenLogic';
 import '../styles/App.css';
 
 function ThirteenGamePage() {
     const navigate = useNavigate();
     const location = useLocation();
-    const { players, isGameActive, startOfflineGame, resetGame, updatePlayerRows, autoArrangePlayerHand, startComparison } = useGame();
-    
+    const {
+        players, isGameActive, startOfflineGame, resetGame, updatePlayerRows,
+        autoArrangePlayerHand, startComparison,
+        dutouCurrent, dutouHistory, chooseDutouScore, challengeDutou
+    } = useGame();
     const [selectedCardIds, setSelectedCardIds] = useState([]);
-    
-    const player = players.find(p => p.id === 'player');
+    const [showDutouDialog, setShowDutouDialog] = useState(false);
+
+    const myId = 'player';
+    const player = players.find(p => p.id === myId);
     const rows = player?.rows || { front: [], middle: [], back: [] };
-    
+
     useEffect(() => {
         if (location.state?.mode === 'offline') {
             startOfflineGame();
         }
-        
         return () => {
             resetGame();
         };
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
+    const handleDutouClick = () => setShowDutouDialog(true);
+    const handleSelectDutouScore = (score) => {
+        chooseDutouScore(myId, score);
+        setShowDutouDialog(false);
+    };
+    const handleDutouScoreClick = (dutouPlayerId, score) => {
+        if (dutouPlayerId === myId) return; // 不能应战自己的独头
+        const challenger = players.find(p => p.id === myId);
+        if (challenger) {
+             challengeDutou(dutouPlayerId, myId, challenger.name);
+        }
+    };
+
     const handleExitGame = () => {
         navigate('/');
     };
-    
     const handleStartComparison = () => {
         const result = startComparison();
         if (result.success) {
@@ -45,31 +62,26 @@ function ThirteenGamePage() {
     const handleCardClick = useCallback((cardId) => {
         setSelectedCardIds(prev => {
             if (prev.includes(cardId)) {
-                return prev.filter(id => id !== cardId); // Deselect
+                return prev.filter(id => id !== cardId);
             } else {
-                return [...prev, cardId]; // Select
+                return [...prev, cardId];
             }
         });
     }, []);
 
     const handleRowClick = useCallback((targetRowId) => {
-        if (selectedCardIds.length === 0) return; // 没有选中的牌，不执行任何操作
+        if (selectedCardIds.length === 0) return;
 
-        let newRows = JSON.parse(JSON.stringify(rows)); // 深拷贝当前牌墩状态
+        let newRows = JSON.parse(JSON.stringify(rows));
         let movedCards = [];
 
-        // 遍历所有选中的牌ID
         selectedCardIds.forEach(cardId => {
             let foundCard = null;
-            let originalRowId = null;
-
-            // 从现有牌墩中找到选中的牌并移除它
             for (const rowId in newRows) {
                 const index = newRows[rowId].findIndex(c => c.id === cardId);
                 if (index !== -1) {
                     foundCard = newRows[rowId][index];
-                    newRows[rowId].splice(index, 1); // 从原牌墩中移除
-                    originalRowId = rowId;
+                    newRows[rowId].splice(index, 1);
                     break;
                 }
             }
@@ -78,11 +90,10 @@ function ThirteenGamePage() {
             }
         });
 
-        // 将所有移动的牌添加到目标牌墩，并重新排序
         newRows[targetRowId] = sortCardsByRank([...newRows[targetRowId], ...movedCards]);
 
-        updatePlayerRows(newRows); // 更新全局游戏状态
-        setSelectedCardIds([]); // 清空选中状态
+        updatePlayerRows(newRows);
+        setSelectedCardIds([]);
     }, [selectedCardIds, rows, updatePlayerRows]);
 
     if (!isGameActive || !player) {
@@ -110,7 +121,14 @@ function ThirteenGamePage() {
                         <Typography>积分: 100</Typography>
                     </Box>
                 </Box>
-                <PlayerStatus players={players} />
+                <PlayerStatus
+                    players={players}
+                    myId={myId}
+                    dutouCurrent={dutouCurrent}
+                    dutouHistory={dutouHistory}
+                    onDutouClick={handleDutouClick}
+                    onDutouScoreClick={handleDutouScoreClick}
+                />
                 <Stack spacing={2} sx={{ flexGrow: 1, justifyContent: 'center' }}>
                     <GameRow id="front" label="头道 (3)" cards={rows.front} selectedCardIds={selectedCardIds} onCardClick={handleCardClick} onRowClick={handleRowClick} />
                     <GameRow id="middle" label="中道 (5)" cards={rows.middle} selectedCardIds={selectedCardIds} onCardClick={handleCardClick} onRowClick={handleRowClick} />
@@ -120,6 +138,11 @@ function ThirteenGamePage() {
                     <Button variant="contained" color="primary" onClick={autoArrangePlayerHand}>智能分牌</Button>
                     <Button variant="contained" color="success" onClick={handleStartComparison}>开始比牌</Button>
                 </Stack>
+                <DutouDialog
+                    open={showDutouDialog}
+                    onClose={() => setShowDutouDialog(false)}
+                    onSelectScore={handleSelectDutouScore}
+                />
             </Box>
         </Box>
     );

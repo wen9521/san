@@ -4,17 +4,23 @@ import { useNavigate } from 'react-router-dom';
 
 import { useEightGame } from '../context/EightGameContext'; 
 import PlayerStatus from '../components/PlayerStatus';
-import { GameRow } from '../components/GameRow'; // 使用新的 GameRow 组件
+import DutouDialog from '../components/DutouDialog';
+import { GameRow } from '../components/GameRow';
 import { validateEightArrangement, sortCardsByRank } from '../utils/eightLogic';
 import '../styles/App.css';
 
 function EightGamePage() {
     const navigate = useNavigate();
-    const { players, isGameActive, startGame, resetGame, updatePlayerRows, autoArrangePlayerHand } = useEightGame();
+    const {
+        players, isGameActive, startGame, resetGame, updatePlayerRows, autoArrangePlayerHand,
+        dutouCurrent, dutouHistory, chooseDutouScore, challengeDutou
+    } = useEightGame();
     
     const [selectedCardIds, setSelectedCardIds] = useState([]);
+    const [showDutouDialog, setShowDutouDialog] = useState(false);
 
-    const player = players.find(p => p.id === 'player');
+    const myId = 'player';
+    const player = players.find(p => p.id === myId);
     const rows = player?.rows || { front: [], middle: [], back: [] };
     
     useEffect(() => {
@@ -30,6 +36,19 @@ function EightGamePage() {
             alert("牌型合法，准备比牌！(比牌逻辑后续实现)");
         } else {
             alert(validationResult.message);
+        }
+    };
+
+    const handleDutouClick = () => setShowDutouDialog(true);
+    const handleSelectDutouScore = (score) => {
+        chooseDutouScore(myId, score);
+        setShowDutouDialog(false);
+    };
+     const handleDutouScoreClick = (dutouPlayerId, score) => {
+        if (dutouPlayerId === myId) return; // 不能应战自己的独头
+        const challenger = players.find(p => p.id === myId);
+        if (challenger) {
+             challengeDutou(dutouPlayerId, myId, challenger.name);
         }
     };
 
@@ -85,7 +104,14 @@ function EightGamePage() {
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 1 }}>
                     <Button variant="contained" sx={{ bgcolor: 'error.main' }} onClick={() => navigate('/')}>退出游戏</Button>
                 </Box>
-                <PlayerStatus players={players} />
+                <PlayerStatus
+                    players={players}
+                    myId={myId}
+                    dutouCurrent={dutouCurrent}
+                    dutouHistory={dutouHistory}
+                    onDutouClick={handleDutouClick}
+                    onDutouScoreClick={handleDutouScoreClick}
+                />
                 <Stack spacing={2} sx={{ flexGrow: 1, justifyContent: 'center' }}>
                     <GameRow id="front" label="头道 (2)" cards={rows.front} selectedCardIds={selectedCardIds} onCardClick={handleCardClick} onRowClick={handleRowClick} />
                     <GameRow id="middle" label="中道 (3)" cards={rows.middle} selectedCardIds={selectedCardIds} onCardClick={handleCardClick} onRowClick={handleRowClick} />
@@ -95,6 +121,11 @@ function EightGamePage() {
                     <Button variant="contained" color="primary" onClick={autoArrangePlayerHand}>智能分牌</Button>
                     <Button variant="contained" color="success" onClick={handleStartComparison}>开始比牌</Button>
                 </Stack>
+                <DutouDialog
+                    open={showDutouDialog}
+                    onClose={() => setShowDutouDialog(false)}
+                    onSelectScore={handleSelectDutouScore}
+                />
             </Box>
         </Box>
     );

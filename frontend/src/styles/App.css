@@ -33,7 +33,7 @@
   width: 100vw;
   overflow: hidden;
   padding: 1rem;
-  box-sizing: border-box;
+  box-sizing: border-sizing;
 }
 
 /* 毛玻璃效果的游戏板 */
@@ -51,7 +51,7 @@
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 20px;
   box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-  max-width: none; /* 移除最大宽度限制 */
+  max-width: 500px; /* 限制最大宽度，使其在手机上居中显示 */
 }
 
 /* 卡片选中效果 */

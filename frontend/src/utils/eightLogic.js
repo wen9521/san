@@ -1,4 +1,4 @@
-import { evaluateHand, compareHands as compareEvaluatedHands } from './thirteenLogic'; // 复用十三张的核心牌型评估和比较
+import { evaluateHand, compareArea as compareEvaluatedHands } from './thirteenLogic'; // 复用十三张的核心牌型评估和比较
 
 /**
  * 验证八张牌的牌型是否合法 (2-3-3)
@@ -14,15 +14,15 @@ export const validateEightArrangement = (rows) => {
     }
 
     // 2. 评估每个牌墩的牌力
-    const frontHand = evaluateHand(front);
-    const middleHand = evaluateHand(middle);
-    const backHand = evaluateHand(back);
+    const frontHand = evaluateHand(front, 'front');
+    const middleHand = evaluateHand(middle, 'middle');
+    const backHand = evaluateHand(back, 'back');
     
     // 3. 比较牌力 (头道 < 中道 < 后道)
-    if (compareEvaluatedHands(frontHand, middleHand) > 0) {
+    if (compareEvaluatedHands(front, middle, 'front') > 0) {
         return { isValid: false, message: '头道牌型大于中道，不符合规则！' };
     }
-    if (compareEvaluatedHands(middleHand, backHand) > 0) {
+    if (compareEvaluatedHands(middle, back, 'middle') > 0) {
         return { isValid: false, message: '中道牌型大于后道，不符合规则！' };
     }
 
@@ -38,7 +38,7 @@ export const validateEightArrangement = (rows) => {
  */
 export const getAIEightBestArrangement = (hand) => {
     // 这是一个简化的实现，仅用于占位。后续可以实现更复杂的AI逻辑。
-    const sortedHand = hand.sort((a, b) => b.value - a.value); // 按牌力从大到小排序
+    const sortedHand = hand.sort((a, b) => (b.value || 0) - (a.value || 0)); // 按牌力从大到小排序
 
     // 简单的分配策略
     const back = sortedHand.slice(0, 3);
@@ -55,5 +55,4 @@ export {
     sortCardsByRank,
     findCardInRows,
     evaluateHand,
-    compareHands
 } from './thirteenLogic';

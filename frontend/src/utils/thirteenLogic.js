@@ -190,11 +190,9 @@ export function compareArea(a, b, area) {
 }
 
 function sortCards(cards) {
-  return cards.slice().sort((a, b) => {
-      const rankComparison = VALUE_ORDER[b.rank] - VALUE_ORDER[a.rank];
-      if (rankComparison !== 0) return rankComparison;
-      return SUIT_ORDER[b.suit] - SUIT_ORDER[a.suit];
-  });
+  return cards.map(card => {
+    return { ...card, value: VALUE_ORDER[card.rank], suitValue: SUIT_ORDER[card.suit] };
+  }).sort((a, b) => b.value - a.value || b.suitValue - a.suitValue);
 }
 
 function getSpecialType(rows) {

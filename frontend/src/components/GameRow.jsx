@@ -17,6 +17,14 @@ export const GameRow = ({ id, cards, label, onRowClick, selectedCardIds, onCardC
         }
     };
 
+    // 八张/十三张自适应宽度，head 2/3, middle/back 3/5
+    // 这里简单判断下 label 或 cards.length
+    let cardWidth = 90, cardHeight = 126;
+    if (cards.length <= 3 || /八张|2|头道/.test(label)) {
+        cardWidth = 60;
+        cardHeight = 84;
+    }
+
     return (
         <Box 
             sx={style}
@@ -26,12 +34,14 @@ export const GameRow = ({ id, cards, label, onRowClick, selectedCardIds, onCardC
                 {cards.map((card, index) => (
                     <Box 
                         key={card.id}
-                        sx={{ marginLeft: index > 0 ? '-50px' : 0 }}
+                        sx={{ marginLeft: index > 0 ? '-40px' : 0 }}
                     >
                         <PokerCard 
                             card={card} 
                             isSelected={selectedCardIds.includes(card.id)} 
                             onClick={onCardClick}
+                            width={cardWidth}
+                            height={cardHeight}
                         />
                     </Box>
                 ))}

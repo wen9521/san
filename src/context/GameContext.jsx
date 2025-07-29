@@ -1,6 +1,6 @@
 import React, { createContext, useState, useContext, useCallback } from 'react';
-import { getAIBestArrangement, calculateAllScores, sortCardsByRank, validateArrangement } from '../utils/thirteenLogic'; // 引入 validateArrangement
-import { dealAndShuffle } from '../utils/deal';
+import { getAIBestArrangement, calculateAllScores, sortCardsByRank } from '../utils/thirteenLogic';
+import { dealAndShuffle } from '../utils/deal'; // 【新增】引入前端发牌模块
 
 const GameContext = createContext();
 
@@ -11,6 +11,7 @@ export const GameProvider = ({ children }) => {
     const [isGameActive, setIsGameActive] = useState(false);
     const [comparisonResult, setComparisonResult] = useState(null);
 
+    // 内部函数，用于设置玩家数据和激活游戏
     const setupGame = (playerHand, ai1Hand, ai2Hand, ai3Hand) => {
         const initialPlayers = [
             { id: 'player', name: '你', hand: playerHand, rows: getAIBestArrangement(playerHand), isReady: false },
@@ -23,6 +24,7 @@ export const GameProvider = ({ children }) => {
         setComparisonResult(null);
     };
     
+    // 用于【在线模式】的函数
     const startOnlineGame = (allCards) => {
         if (allCards && allCards.length === 52) {
             const hands = {
@@ -35,8 +37,9 @@ export const GameProvider = ({ children }) => {
         }
     };
     
+    // 【新增】用于【离线试玩模式】的函数
     const startOfflineGame = useCallback(() => {
-        const hands = dealAndShuffle();
+        const hands = dealAndShuffle(); // 调用前端发牌模块
         setupGame(hands.player, hands.ai1, hands.ai2, hands.ai3);
     }, []);
 
@@ -63,43 +66,62 @@ export const GameProvider = ({ children }) => {
         });
     };
 
-    // 【核心重构】: 创建一个统一的函数来处理比牌逻辑
-    const startComparison = () => {
-        const player = players.find(p => p.id === 'player');
-        if (!player) return { success: false, message: "找不到玩家数据" };
-
-        const validation = validateArrangement(player.rows);
-        if (!validation.isValid) {
-            // alert(validation.message); // 让页面组件来处理提示
-            return { success: false, message: validation.message };
-        }
-
-        // 1. 基于当前状态，计算出下一个 players 状态
-        const updatedPlayers = players.map(p => 
-            p.id === 'player' ? { ...p, isReady: true } : p
-        );
-
-        // 2. 使用这个确定的新状态来计算结果
-        const results = calculateAllScores(updatedPlayers);
-        
-        // 3. 一次性或连续地更新所有相关的状态
-        setPlayers(updatedPlayers);
-        setComparisonResult(results);
-
-        // 4. 返回成功信号
-        return { success: true };
+    const setPlayerReady = () => {
+        let updatedPlayers = [];
+        setPlayers(prev => {
+            updatedPlayers = prev.map(p => 
+                p.id === 'player' ? { ...p, isReady: true } : p
+            );
+            return updatedPlayers;
+        });
+        return updatedPlayers;
     };
     
+    const calculateResults = (currentPlayers) => {
+        if (currentPlayers.every(p => p.isReady)) {
+            const results = calculateAllScores(currentPlayers);
+            setComparisonResult(results);
+            return true;
+        }
+        return false;
+    };
+
+    // 【新增】补充 startComparison，供页面直接调用
+    const startComparison = () => {
+        // 1. 先把玩家标记为已准备
+        let updatedPlayers = [];
+        setPlayers(prev => {
+            updatedPlayers = prev.map(p =>
+                p.id === 'player' ? { ...p, isReady: true } : p
+            );
+            return updatedPlayers;
+        });
+
+        // 2. 立即用 updatedPlayers 计算，如果玩家已准备
+        if (updatedPlayers.length && updatedPlayers.every(p => p.isReady)) {
+            const success = calculateResults(updatedPlayers);
+            if (success) {
+                return { success: true };
+            } else {
+                return { success: false, message: "牌型不合法，请调整后再试。" };
+            }律师
+        } else {
+            return { success: false, message: "无法进入比牌，请检查状态。" };
+        }
+    };
+
     const value = {
         players,
         isGameActive,
         comparisonResult,
-        startOnlineGame,
-        startOfflineGame,
+        startOnlineGame, // 导出在线模式函数
+        startOfflineGame, // 导出离线模式函数
         resetGame,
         updatePlayerRows,
         autoArrangePlayerHand,
-        startComparison, // 【核心重构】: 导出新函数
+        setPlayerReady,
+        calculateResults,
+        startComparison, // ← 补充导出
     };
 
     return <GameContext.Provider value={value}>{children}</GameContext.Provider>;

@@ -1,7 +1,10 @@
 import React from 'react';
 
-export const PokerCard = ({ card, isSelected, onClick }) => {
+// 支持 width/height 属性，默认 90x126
+export const PokerCard = ({ card, isSelected, onClick, width = 90, height = 126 }) => {
     const style = {
+        width: `${width}px`,
+        height: `${height}px`,
         transform: isSelected ? 'translateY(-15px)' : 'none',
         transition: 'transform 0.2s ease-in-out',
         outline: isSelected ? '3px solid #ffab40' : 'none',

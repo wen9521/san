@@ -12,7 +12,7 @@
 
 /* 扑克牌基础样式 */
 .poker-card {
-  width: 90px;  /* 稍微缩小卡片以适应面板 */
+  width: 90px;
   height: 126px;
   border-radius: 8px;
   overflow: hidden;
@@ -26,30 +26,35 @@
   display: block;
 }
 
-/* 【核心恢复】: 游戏板现在是居中的、有最大宽度的面板 */
-.game-board {
-  width: 100%;
-  max-width: 500px; /* 限制最大宽度，使其在手机上居中显示 */
-  margin: auto;
+/* 新的全屏容器 */
+.page-container-new-ui {
   display: flex;
-  flex-direction: column;
-  gap: 1rem; /* 增加元素间的间距 */
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
   padding: 1rem;
   box-sizing: border-box;
-  
-  /* 毛玻璃效果 */
+}
+
+/* 毛玻璃效果的游戏板 */
+.game-board.glass-effect {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  gap: 1rem;
+  padding: 1rem;
+  box-sizing: border-box;
   background: rgba(255, 255, 255, 0.15);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 20px; /* 大圆角 */
+  border-radius: 20px;
   box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+  max-width: none; /* 移除最大宽度限制 */
 }
 
-/* 
-  移除 .page-container-new-ui 和其他全屏相关的样式，
-  因为我们现在统一使用 .page-container 和 .game-board 组合。
-*/
+/* 卡片选中效果 */
 .card-in-row.selected {
   transform: translateY(-10px) scale(1.05);
   box-shadow: 0 0 15px 5px rgba(255, 255, 0, 0.7);

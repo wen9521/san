@@ -12,27 +12,24 @@ import '../styles/App.css';
 function ThirteenGamePage() {
     const navigate = useNavigate();
     const location = useLocation();
-    const { players, isGameActive, startOfflineGame, resetGame, updatePlayerRows, autoArrangePlayerHand, setPlayerReady, calculateResults } = useGame();
+    const { players, isGameActive, startOfflineGame, resetGame, updatePlayerRows, autoArrangePlayerHand, startComparison } = useGame();
     
     const [selectedCardIds, setSelectedCardIds] = useState([]);
     const [activeDragId, setActiveDragId] = useState(null);
     
     const player = players.find(p => p.id === 'player');
     const rows = player?.rows || { front: [], middle: [], back: [] };
-    const validationResult = player ? validateArrangement(player.rows) : null;
-
+    
     useEffect(() => {
-        // 【核心修正】: 确保只在组件初次加载时根据模式启动游戏
         if (location.state?.mode === 'offline') {
             startOfflineGame();
         }
         
-        // 返回一个清理函数，这个函数只在组件卸载时执行
         return () => {
             resetGame();
         };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []); // 【核心修正】: 使用空的依赖项数组确保 effect 只运行一次
+    }, []);
 
     const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
 
@@ -41,13 +38,11 @@ function ThirteenGamePage() {
     };
     
     const handleStartComparison = () => {
-        if (validationResult?.isValid) {
-            const updatedPlayers = setPlayerReady();
-            if (calculateResults(updatedPlayers)) {
-                navigate('/thirteen/comparison');
-            }
+        const result = startComparison();
+        if (result.success) {
+            navigate('/thirteen/comparison');
         } else {
-            alert(validationResult?.message || "牌型不合法，请调整后再试。");
+            alert(result.message || "牌型不合法，请调整后再试。");
         }
     };
     
@@ -60,50 +55,66 @@ function ThirteenGamePage() {
         )
     }
 
-    // ... (拖拽等其他逻辑保持不变)
     const activeCardForOverlay = activeDragId ? findCardInRows(rows, activeDragId) : null;
     const handleCardClick = (cardId) => setSelectedCardIds(prev => prev.includes(cardId) ? [] : [cardId]);
     const handleDragStart = (event) => setActiveDragId(event.active.id);
-    const handleDragEnd = (event) => { /* ... */ };
+    const handleDragEnd = (event) => {
+        const { active, over } = event;
+        setActiveDragId(null);
+        if (!over || !player) return;
+        
+        const currentRows = player.rows;
+        let newRows = JSON.parse(JSON.stringify(currentRows));
+        
+        const sourceRowId = Object.keys(currentRows).find(key => currentRows[key].some(c => c.id === active.id));
+        const cardToMove = sourceRowId ? currentRows[sourceRowId].find(c => c.id === active.id) : null;
+
+        if (!sourceRowId || !cardToMove) return;
+
+        newRows[sourceRowId] = newRows[sourceRowId].filter(c => c.id !== active.id);
+        
+        const overRowId = over.id in newRows ? over.id : Object.keys(newRows).find(key => newRows[key].some(c => c.id === over.id));
+        if (newRows[overRowId]) {
+             newRows[overRowId].push(cardToMove);
+             newRows[overRowId] = sortCardsByRank(newRows[overRowId]);
+        }
+        
+        updatePlayerRows(newRows);
+        setSelectedCardIds([]);
+    };
 
     return (
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-            <Box className="page-container">
-                <Box className="game-board">
-                    {/* ... (UI结构保持不变) ... */}
+            <Box className="page-container-new-ui">
+                <Box className="game-board glass-effect">
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 1 }}>
                         <Button
                             variant="contained"
                             onClick={handleExitGame}
-                            sx={{
-                                background: 'rgba(255, 100, 100, 0.7)',
-                                backdropFilter: 'blur(5px)',
-                                '&:hover': { background: 'rgba(255, 100, 100, 0.9)'}
-                            }}
+                            sx={{ bgcolor: 'error.main', '&:hover': { bgcolor: 'error.dark' } }}
                         >
-                            &lt; 退出房间
+                            退出游戏
                         </Button>
-                        <Box sx={{display: 'flex', alignItems: 'center', gap: 1, p: '4px 12px', background: 'rgba(255,255,255,0.1)', borderRadius: '20px'}}>
+                        <Box sx={{display: 'flex', alignItems: 'center', gap: 1, p: '4px 12px', background: 'rgba(0,0,0,0.2)', borderRadius: '20px'}}>
                             <Typography sx={{ color: '#ffd700', fontSize: '20px' }}>🪙</Typography>
                             <Typography>积分: 100</Typography>
                         </Box>
                     </Box>
                     <PlayerStatus players={players} />
-                    <Stack spacing={2}>
+                    <Stack spacing={2} sx={{ flexGrow: 1, justifyContent: 'center' }}>
                         <DroppableRow id="front" label="头道 (3)" cards={rows.front} selectedCardIds={selectedCardIds} onCardClick={handleCardClick} />
                         <DroppableRow id="middle" label="中道 (5)" cards={rows.middle} selectedCardIds={selectedCardIds} onCardClick={handleCardClick} />
                         <DroppableRow id="back" label="后道 (5)" cards={rows.back} selectedCardIds={selectedCardIds} onCardClick={handleCardClick} />
                     </Stack>
-                    <Stack direction="row" spacing={2} justifyContent="center" sx={{ mt: 2 }}>
-                        <Button variant="contained" sx={{flex: 1, background: 'rgba(255,255,255,0.2)'}}>取消准备</Button>
-                        <Button variant="contained" color="primary" sx={{flex: 1, background: '#1976d2' }} onClick={autoArrangePlayerHand}>智能分牌</Button>
-                        <Button variant="contained" color="warning" sx={{flex: 1, background: '#f57c00'}} onClick={handleStartComparison}>开始比牌</Button>
+                    <Stack direction="row" spacing={2} justifyContent="center" sx={{ p: 2 }}>
+                        <Button variant="contained" color="primary" onClick={autoArrangePlayerHand}>智能分牌</Button>
+                        <Button variant="contained" color="success" onClick={handleStartComparison}>开始比牌</Button>
                     </Stack>
                 </Box>
             </Box>
             <DragOverlay>
                 {activeCardForOverlay ? (
-                    <div className="poker-card">
+                    <div className="poker-card" style={{ width: '120px', height: '168px' }}>
                          <img src={`/assets/cards/${activeCardForOverlay.id}.svg`} alt="card" style={{width: '100%', height: '100%'}}/>
                     </div>
                 ) : null}

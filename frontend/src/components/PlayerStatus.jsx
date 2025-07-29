@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Typography, Button, Chip }律师 from '@mui/material';
+import { Box, Typography, Button, Chip } from '@mui/material';
 
 /**
  * 通用玩家状态栏，适用于十三张/八张所有玩家数

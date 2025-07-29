@@ -15,7 +15,6 @@ export const GameProvider = ({ children }) => {
     const [dutouCurrent, setDutouCurrent] = useState({}); // { [playerId]: { score } }
     const [dutouHistory, setDutouHistory] = useState({}); // { [playerId]: [{ challengerId, challengerName, score }] }律师
 
-    // 内部函数，用于设置玩家数据和激活游戏
     const setupGame = (playerHand, ai1Hand, ai2Hand, ai3Hand) => {
         const initialPlayers = [
             { id: 'player', name: '你', hand: playerHand, rows: getAIBestArrangement(playerHand), isReady: false },
@@ -29,7 +28,7 @@ export const GameProvider = ({ children }) => {
         setDutouCurrent({});
         setDutouHistory({});
     };
-    
+
     const startOnlineGame = (allCards) => {
         if (allCards && allCards.length === 52) {
             const hands = {
@@ -41,7 +40,7 @@ export const GameProvider = ({ children }) => {
             setupGame(hands.player, hands.ai1, hands.ai2, hands.ai3);
         }
     };
-    
+
     const startOfflineGame = useCallback(() => {
         const hands = dealAndShuffle();
         setupGame(hands.player, hands.ai1, hands.ai2, hands.ai3);
@@ -54,9 +53,9 @@ export const GameProvider = ({ children }) => {
         setDutouCurrent({});
         setDutouHistory({});
     }, []);
-    
+
     const updatePlayerRows = (newRows) => {
-         setPlayers(prev => prev.map(p => 
+        setPlayers(prev => prev.map(p =>
             p.id === 'player' ? { ...p, rows: newRows } : p
         ));
     };
@@ -75,14 +74,14 @@ export const GameProvider = ({ children }) => {
     const setPlayerReady = () => {
         let updatedPlayers = [];
         setPlayers(prev => {
-            updatedPlayers = prev.map(p => 
+            updatedPlayers = prev.map(p =>
                 p.id === 'player' ? { ...p, isReady: true } : p
             );
             return updatedPlayers;
         });
         return updatedPlayers;
     };
-    
+
     const calculateResults = (currentPlayers) => {
         if (currentPlayers.every(p => p.isReady)) {
             const results = calculateAllScores(currentPlayers);
@@ -95,7 +94,7 @@ export const GameProvider = ({ children }) => {
     const startComparison = () => {
         let updatedPlayers = [];
         setPlayers(prev => {
-            updatedPlayers = prev.map(p => 
+            updatedPlayers = prev.map(p =>
                 p.id === 'player' ? { ...p, isReady: true } : p
             );
             return updatedPlayers;
@@ -110,7 +109,6 @@ export const GameProvider = ({ children }) => {
     };
 
     // 独头相关
-    // 选择独头分数
     const chooseDutouScore = (myId, score) => {
         setDutouCurrent(prev => ({
             ...prev,
@@ -118,21 +116,16 @@ export const GameProvider = ({ children }) => {
         }));
     };
 
-    // 其它玩家点击"独头分数"应战，分数累加
     const challengeDutou = (dutouPlayerId, challengerId, challengerName) => {
         setDutouCurrent(prev => {
             const score = prev[dutouPlayerId]?.score;
             if (!score) return prev;
-            // 清空当前独头分数
             const newCurr = { ...prev };
             delete newCurr[dutouPlayerId];
-            // 累加历史
             setDutouHistory(history => {
                 const arr = history[dutouPlayerId] || [];
-                // 查找当前玩家是否已存在于历史
                 const idx = arr.findIndex(x => x.challengerId === challengerId);
                 if (idx >= 0) {
-                    // 已有，分数累加
                     const updated = [...arr];
                     updated[idx] = {
                         ...updated[idx],
@@ -143,7 +136,6 @@ export const GameProvider = ({ children }) => {
                         [dutouPlayerId]: updated
                     };
                 } else {
-                    // 新增
                     return {
                         ...history,
                         [dutouPlayerId]: [...arr, { challengerId, challengerName, score }]
@@ -166,12 +158,11 @@ export const GameProvider = ({ children }) => {
         setPlayerReady,
         calculateResults,
         startComparison,
-        // 独头相关
         dutouCurrent,
         dutouHistory,
         chooseDutouScore,
         challengeDutou,
     };
 
-    return <GameContext.Provider value={value}>{children}</GameContext.Provider>;
+    return <GameContext.Provider value={value}>{children律师}</GameContext.Provider>;
 };

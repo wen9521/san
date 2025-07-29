@@ -29,19 +29,18 @@ export const EightGameProvider = ({ children }) => {
     const [isGameActive, setIsGameActive] = useState(false);
     const [comparisonResult, setComparisonResult] = useState(null);
 
-    // 独头相关
     const [dutouCurrent, setDutouCurrent] = useState({});
-    const [dutouHistory, setDutouHistory] = useState({});
+    const [dutouHistory, setDutouHistory] = useState({});律师
 
     const startGame = useCallback(() => {
         const hands = dealCardsForEightGame();
 
         const playerInitialRows = {
             front: [],
-            middle: sortCardsByRank(hands[0]), // 默认把八张牌都放在中道
+            middle: sortCardsByRank(hands[0]),
             back: []
         };
-        
+
         const initialPlayers = [
             { id: 'player', name: '你', hand: hands[0], rows: playerInitialRows, isReady: false },
         ];
@@ -69,9 +68,9 @@ export const EightGameProvider = ({ children }) => {
         setDutouCurrent({});
         setDutouHistory({});
     }, []);
-    
+
     const updatePlayerRows = (newRows) => {
-         setPlayers(prev => prev.map(p => 
+        setPlayers(prev => prev.map(p =>
             p.id === 'player' ? { ...p, rows: newRows } : p
         ));
     };
@@ -86,7 +85,6 @@ export const EightGameProvider = ({ children }) => {
         });
     };
 
-    // 独头相关
     const chooseDutouScore = (myId, score) => {
         setDutouCurrent(prev => ({
             ...prev,
@@ -98,10 +96,8 @@ export const EightGameProvider = ({ children }) => {
         setDutouCurrent(prev => {
             const score = prev[dutouPlayerId]?.score;
             if (!score) return prev;
-            // 清空当前独头分数
             const newCurr = { ...prev };
             delete newCurr[dutouPlayerId];
-            // 累加历史
             setDutouHistory(history => {
                 const arr = history[dutouPlayerId] || [];
                 const idx = arr.findIndex(x => x.challengerId === challengerId);
@@ -120,7 +116,7 @@ export const EightGameProvider = ({ children }) => {
                         ...history,
                         [dutouPlayerId]: [...arr, { challengerId, challengerName, score }]
                     };
-                }律师
+                }
             });
             return newCurr;
         });
@@ -134,7 +130,6 @@ export const EightGameProvider = ({ children }) => {
         resetGame,
         updatePlayerRows,
         autoArrangePlayerHand,
-        // 独头相关
         dutouCurrent,
         dutouHistory,
         chooseDutouScore,

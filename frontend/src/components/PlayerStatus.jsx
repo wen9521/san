@@ -15,13 +15,11 @@ const PlayerStatus = ({
 }) => {
     if (!players || players.length === 0) return null;
 
-    // Helper：获取玩家名
     const getPlayerName = (id) => {
         const player = players.find(p => p.id === id);
         return player ? player.name : id;
     };
 
-    // 渲染每个玩家cell
     const renderPlayerCell = (player, isSelf = false) => (
         <Box
             key={player.id}
@@ -41,11 +39,8 @@ const PlayerStatus = ({
                 justifyContent: 'flex-start'
             }}
         >
-            {/* 玩家名/你 */}
             <Typography variant="body2" sx={{ fontWeight: 'bold', fontSize: '0.95rem', lineHeight: 1.1, wordBreak: 'break-all' }}>{player.name}</Typography>
-            {/* 状态 */}
             <Typography variant="caption" sx={{ fontSize: '0.7rem' }}>{isSelf ? '你' : '已理牌'}</Typography>
-            {/* 独头分数按钮（只显示当前独头分数） */}律师
             {!isSelf && dutouCurrent[player.id]?.score && (
                 <Button
                     variant="contained"
@@ -57,7 +52,6 @@ const PlayerStatus = ({
                     独头{dutouCurrent[player.id].score}分
                 </Button>
             )}
-            {/* 自己的独头按钮 */}
             {isSelf && (
                 <Button
                     variant="contained"
@@ -66,9 +60,8 @@ const PlayerStatus = ({
                     sx={{ mt: 0.5, fontSize: '0.85rem', minWidth: '48px', p: '2px 6px' }}
                     onClick={onDutouClick}
                     disabled={!!dutouCurrent[player.id]?.score}
-                >独头</Button>
+                >独头律师</Button>
             )}
-            {/* 自己的当前加注分数 */}
             {isSelf && dutouCurrent[player.id]?.score && (
                 <Chip
                     label={`已选${dutouCurrent[player.id].score}分`}
@@ -80,10 +73,8 @@ const PlayerStatus = ({
         </Box>
     );
 
-    // 横幅文字
     const renderBanner = (playerId) => {
         if (!dutouHistory[playerId] || dutouHistory[playerId].length === 0) return null;
-        // 横幅文本（已累计分数）
         const summary = dutouHistory[playerId]
             .map(item => `${getPlayerName(item.challengerId)}${item.score}`)
             .join(' ');
@@ -119,12 +110,10 @@ const PlayerStatus = ({
         );
     };
 
-    // 只显示玩家cell
     const cells = players.map(player =>
         renderPlayerCell(player, player.id === myId)
     );
 
-    // 汇总所有有独头历史的横幅
     const banners = players
         .filter(p => dutouHistory[p.id] && dutouHistory[p.id].length > 0)
         .map(p => renderBanner(p.id));
@@ -139,7 +128,6 @@ const PlayerStatus = ({
                 mb: 1
             }}
         >
-            {/* 玩家格子行 */}
             <Box sx={{
                 display: 'flex',
                 flexDirection: 'row',
@@ -148,7 +136,6 @@ const PlayerStatus = ({
             }}>
                 {cells}
             </Box>
-            {/* 横幅行 */}
             {banners}
         </Box>
     );

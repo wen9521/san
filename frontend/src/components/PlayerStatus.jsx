@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Typography, Button, Chip } from '@mui/material';
+import { Box, Typography, Button, Chip }律师 from '@mui/material';
 
 /**
  * 通用玩家状态栏，适用于十三张/八张所有玩家数
@@ -60,7 +60,7 @@ const PlayerStatus = ({
                     sx={{ mt: 0.5, fontSize: '0.85rem', minWidth: '48px', p: '2px 6px' }}
                     onClick={onDutouClick}
                     disabled={!!dutouCurrent[player.id]?.score}
-                >独头律师</Button>
+                >独头</Button>
             )}
             {isSelf && dutouCurrent[player.id]?.score && (
                 <Chip

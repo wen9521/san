@@ -30,7 +30,7 @@ export const EightGameProvider = ({ children }) => {
     const [comparisonResult, setComparisonResult] = useState(null);
 
     const [dutouCurrent, setDutouCurrent] = useState({});
-    const [dutouHistory, setDutouHistory] = useState({});律师
+    const [dutouHistory, setDutouHistory] = useState({});
 
     const startGame = useCallback(() => {
         const hands = dealCardsForEightGame();

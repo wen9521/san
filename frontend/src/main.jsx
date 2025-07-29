@@ -4,7 +4,7 @@ import App from './App.jsx';
 import './index.css';
 import { CssBaseline, ThemeProvider, createTheme } from '@mui/material';
 import { HashRouter } from 'react-router-dom';
-// 【核心重构】: GameProvider 已被移动到各自的布局中，这里不再需要
+import { AuthProvider } from './context/AuthContext'; // ★ 加上这一行
 
 const darkTheme = createTheme({
   palette: {
@@ -19,9 +19,11 @@ ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <ThemeProvider theme={darkTheme}>
       <CssBaseline />
-      <HashRouter>
-        <App />
-      </HashRouter>
+      <AuthProvider>
+        <HashRouter>
+          <App />
+        </HashRouter>
+      </AuthProvider>
     </ThemeProvider>
   </React.StrictMode>,
 );

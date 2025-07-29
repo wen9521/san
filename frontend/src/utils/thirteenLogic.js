@@ -3,8 +3,10 @@ const SUITS = { spades: 4, hearts: 3, clubs: 2, diamonds: 1 };
 const RANKS = { '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9, '10': 10, 'jack': 11, 'queen': 12, 'king': 13, 'ace': 14 };
 
 // 辅助函数：解析卡片
-const parseCard = (cardId) => {
-    if(!cardId || typeof cardId !== 'string') return { rank: 0, suit: 0 };
+const parseCard = (card) => {
+    // 【核心修正】: 能同时处理字符串和对象
+    const cardId = typeof card === 'string' ? card : card.id;
+    if(!cardId) return { rank: 0, suit: 0 };
     const parts = cardId.split('_of_');
     return { rank: RANKS[parts[0]], suit: SUITS[parts[1]] };
 };
@@ -12,7 +14,7 @@ const parseCard = (cardId) => {
 export const evaluateHand = (hand) => {
     if (!hand || hand.length === 0) return { type: '无效牌型', rank: 0, highCards: [] };
 
-    const cards = hand.map(c => parseCard(c.id || c)).sort((a, b) => b.rank - a.rank);
+    const cards = hand.map(parseCard).sort((a, b) => b.rank - a.rank);
     const ranks = cards.map(c => c.rank);
     const suits = cards.map(c => c.suit);
     const highCards = ranks;
@@ -69,17 +71,9 @@ export const validateArrangement = (rows) => {
     return { isValid: true, message: '牌型合法' };
 };
 
-/**
- * 【核心修正】: 纠正AI理牌逻辑，确保牌量为 3-5-5
- * @param {Array<Object>} hand - 包含13张牌的数组
- * @returns {{front: Array, middle: Array, back: Array}} - 返回一个符合3-5-5规则的排列
- */
 export const getAIBestArrangement = (hand) => {
-    // 这是一个简化实现，AI逻辑可以非常复杂。
-    // 这里我们仅确保数量是正确的 3-5-5
     const sortedHand = hand.sort((a, b) => (RANKS[a.rank] || 0) - (RANKS[b.rank] || 0));
     
-    // 简单的分配策略：最小的3张给头道，中间5张给中道，最大的5张给后道
     return {
         front: sortedHand.slice(0, 3),
         middle: sortedHand.slice(3, 8),
@@ -88,7 +82,6 @@ export const getAIBestArrangement = (hand) => {
 };
 
 export const calculateAllScores = (players) => {
-    // ... (计分逻辑)
     return { scores: [], details: [] };
 };
 

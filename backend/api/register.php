@@ -53,7 +53,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
 // --- 您的API业务逻辑从这里开始 ---
 
 // 引入数据库连接
-require_once '../db_connect.php';
+require_once 'db_connect.php';
 
 // 获取POST数据
 $data = json_decode(file_get_contents('php://input'), true);

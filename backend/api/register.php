@@ -42,6 +42,8 @@ if (strlen($password) < 6) {
 // 数据库操作
 try {
     $db = new SQLite3(__DIR__ . '/../db/user.db');
+    // 确保用户表存在
+    $db->exec('CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, phone TEXT UNIQUE, password TEXT, points INTEGER DEFAULT 0)');
     
     // 检查手机号是否已存在
     $stmt = $db->prepare("SELECT COUNT(*) as count FROM users WHERE phone = :phone");

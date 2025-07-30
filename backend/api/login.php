@@ -40,6 +40,9 @@ if (empty($phone) || empty($password)) {
 // 数据库操作
 try {
     $db = new SQLite3(__DIR__ . '/../db/user.db');
+    // 确保用户表存在
+    $db->exec('CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, phone TEXT UNIQUE, password TEXT, points INTEGER DEFAULT 0)');
+
     $stmt = $db->prepare("SELECT id, phone, password, points FROM users WHERE phone = :phone");
     $stmt->bindValue(':phone', $phone, SQLITE3_TEXT);
     

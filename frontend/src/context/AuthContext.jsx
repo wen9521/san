@@ -17,11 +17,11 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
-  const login = async (phone, password) => {
+  const login = async (username, password) => { // 将phone改为username
     try {
-      const res = await apiRequest('/login.php', { // 注意这里的修改：增加了斜杠
+      const res = await apiRequest('/login.php', {
         method: 'POST',
-        body: JSON.stringify({ phone, password })
+        body: JSON.stringify({ username, password }) // 将phone改为username
       });
       if (res && res.success) {
         setUser(res.data);
@@ -34,11 +34,11 @@ export function AuthProvider({ children }) {
     }
   };
 
-  const register = async (phone, password) => {
+  const register = async (username, password) => { // 将phone改为username
     try {
-      const res = await apiRequest('/register.php', { // 注意这里的修改：增加了斜杠
+      const res = await apiRequest('/register.php', {
         method: 'POST',
-        body: JSON.stringify({ phone, password })
+        body: JSON.stringify({ username, password }) // 将phone改为username
       });
       if (res && res.success) {
         setUser(res.data);
@@ -61,9 +61,9 @@ export function AuthProvider({ children }) {
 
   const searchUserByPhone = async (phone) => {
     try {
-        return await apiRequest('/points.php?action=search', { // 注意这里的修改：增加了斜杠
+        return await apiRequest('/points.php?action=search', {
             method: 'POST',
-            body: JSON.stringify({ phone })
+            body: JSON.stringify({ phone }) // 此处保留phone，因为搜索可能仍按手机号
         });
     } catch (error) {
         return { success: false, message: error.message };
@@ -73,7 +73,7 @@ export function AuthProvider({ children }) {
   const transferPoints = async (toPhone, amount) => {
     if (!user) return { success: false, message: '请先登录' };
     try {
-        const res = await apiRequest('/points.php?action=transfer', { // 注意这里的修改：增加了斜杠
+        const res = await apiRequest('/points.php?action=transfer', {
             method: 'POST',
             body: JSON.stringify({ from: user.phone, to: toPhone, amount })
         });

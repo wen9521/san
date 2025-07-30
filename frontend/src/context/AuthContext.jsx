@@ -4,7 +4,7 @@ import PointsDialog from '../components/PointsDialog';
 
 export const AuthContext = createContext();
 
-const API_BASE = "https://serv00.com/api"; // 改成你的 PHP API 路径
+const API_BASE = "https://9525.ip-ddns.com/api"; // 改成你的 PHP API 路径
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);

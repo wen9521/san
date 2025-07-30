@@ -1,5 +1,6 @@
 import React, { createContext, useState, useEffect } from 'react';
 import AuthDialog from '../components/AuthDialog';
+import PointsDialog from '../components/PointsDialog';
 
 export const AuthContext = createContext();
 
@@ -8,14 +9,12 @@ const API_BASE = "https://serv00.com/api"; // 改成你的 PHP API 路径
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [isAuthDialogOpen, setAuthDialogOpen] = useState(false);
+  const [isPointsDialogOpen, setPointsDialogOpen] = useState(false);
 
   useEffect(() => {
     const savedUser = localStorage.getItem('user');
     if (savedUser) {
       setUser(JSON.parse(savedUser));
-    } else {
-      // 如果没有用户信息，可以决定是否自动弹出登录框
-      // setAuthDialogOpen(true);
     }
   }, []);
 
@@ -28,7 +27,7 @@ export function AuthProvider({ children }) {
     if (res && res.success) {
       setUser(res.data);
       localStorage.setItem('user', JSON.stringify(res.data));
-      setAuthDialogOpen(false); // 关闭对话框
+      setAuthDialogOpen(false);
     }
     return res || { success: false, message: '网络异常' };
   };
@@ -42,7 +41,7 @@ export function AuthProvider({ children }) {
     if (res && res.success) {
       setUser(res.data);
       localStorage.setItem('user', JSON.stringify(res.data));
-      setAuthDialogOpen(false); // 关闭对话框
+      setAuthDialogOpen(false);
     }
     return res || { success: false, message: '网络异常' };
   };
@@ -50,11 +49,10 @@ export function AuthProvider({ children }) {
   const logout = () => {
     setUser(null);
     localStorage.removeItem('user');
-    // 退出后可以视情况决定是否弹出登录框
-    // setAuthDialogOpen(true);
   };
 
   const openAuthDialog = () => setAuthDialogOpen(true);
+  const openPointsDialog = () => setPointsDialogOpen(true);
 
   const searchUserByPhone = async (phone) => {
     const res = await fetch(`${API_BASE}/points.php?action=search`, {
@@ -81,9 +79,10 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, openAuthDialog, searchUserByPhone, transferPoints }}>
+    <AuthContext.Provider value={{ user, login, register, logout, openAuthDialog, openPointsDialog, searchUserByPhone, transferPoints }}>
       {children}
       <AuthDialog open={isAuthDialogOpen} onClose={() => setAuthDialogOpen(false)} />
+      <PointsDialog open={isPointsDialogOpen} onClose={() => setPointsDialogOpen(false)} />
     </AuthContext.Provider>
   );
 }

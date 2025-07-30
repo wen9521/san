@@ -1,20 +1,14 @@
-import React, { useContext, useState } from 'react';
+import React, { useContext } from 'react';
 import { Box, Typography, Button, Paper, Grid } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
-import AuthDialog from '../components/AuthDialog.jsx';
-import PointsDialog from '../components/PointsDialog.jsx';
 import { AuthContext } from '../context/AuthContext.jsx';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import MonetizationOnIcon from '@mui/icons-material/MonetizationOn';
 
 const HomePage = () => {
   const navigate = useNavigate();
-  const { user, logout } = useContext(AuthContext);
+  const { user, logout, openAuthDialog, openPointsDialog } = useContext(AuthContext);
 
-  const [showAuth, setShowAuth] = useState(false);
-  const [showPoints, setShowPoints] = useState(false);
-
-  // 顶部栏
   const TopBar = () => (
     <Box sx={{
       position: 'absolute',
@@ -28,7 +22,7 @@ const HomePage = () => {
             startIcon={<AccountCircleIcon />}
             variant="contained"
             size="small"
-            onClick={() => setShowAuth(true)}
+            onClick={openAuthDialog}
           >
             注册/登录
           </Button>
@@ -50,7 +44,7 @@ const HomePage = () => {
           variant="outlined"
           size="small"
           color="success"
-          onClick={() => setShowPoints(true)}
+          onClick={openPointsDialog}
         >
           积分管理
         </Button>
@@ -125,8 +119,6 @@ const HomePage = () => {
           </Paper>
         </Grid>
       </Grid>
-      <AuthDialog open={showAuth} onClose={() => setShowAuth(false)} />
-      <PointsDialog open={showPoints} onClose={() => setShowPoints(false)} />
     </Box>
   );
 };

@@ -1,144 +1,118 @@
 <?php
-// --- 新的、更健壮的安全与CORS设置 ---
+// --- 最终的、由您提供的完美CORS与安全设置 ---
 
-// 【第1步】: 定义信任的来源和我们的秘密暗号
-$allowed_web_origins = [
-    'https://gewe.dpdns.org',
+// 【第1步】: 定义信任的来源白名单
+$allowed_origins = [
+    'https://9525.ip-ddns.com',   // 您当前正在使用的域名
+    'https://gewe.dpdns.org',    // 您的线上Web前端
+    'capacitor://localhost',      // Capacitor App 的标准 Origin
+    'http://localhost',           // 某些Capacitor/Cordova环境下的 Origin
+    // 'http://localhost:5173'   // 如果您有本地Web开发环境
 ];
-$app_secret_header = 'X-App-Secret';
-// 已更新为更复杂的密钥
-$app_secret_value = 'Xla2M666amiV9QehKwOTDJb8uvkozemr';
 
-$is_request_allowed = false;
+// 检查请求的来源
 $request_origin = isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : '';
-$server_secret_key = 'HTTP_' . strtoupper(str_replace('-', '_', $app_secret_header));
-$request_secret = isset($_SERVER[$server_secret_key]) ? $_SERVER[$server_secret_key] : '';
+$is_request_allowed = false;
 
 // 【第2步】: 安全校验逻辑
-if (in_array($request_origin, $allowed_web_origins)) {
+// 规则：请求的来源必须在我们定义的白名单中
+if (in_array($request_origin, $allowed_origins)) {
     $is_request_allowed = true;
-} elseif ($request_secret === $app_secret_value) {
+} 
+// 对 'null' Origin 的特殊处理
+elseif ($request_origin === 'null' || empty($request_origin)) {
     $is_request_allowed = true;
-    if (empty($request_origin)) {
-        $request_origin = 'capacitor://localhost'; 
-    }
+    // 当Origin是null时，我们不能在响应头里返回'null'，通常返回一个白名单里的值
+    $request_origin = 'capacitor://localhost';
 }
 
 // 【第3步】: 根据校验结果设置响应头
 if (!$is_request_allowed) {
     header("HTTP/1.1 403 Forbidden");
-    exit('Forbidden: Invalid origin or missing/incorrect secret.');
+    // 返回更详细的错误，方便调试
+    $error_details = [
+        'error' => 'Forbidden: Origin not allowed.',
+        'your_origin' => isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : 'Not specified'
+    ];
+    header('Content-Type: application/json');
+    echo json_encode($error_details);
+    exit();
 }
 
+// 请求合法，我们为其设置CORS响应头
 header("Access-Control-Allow-Origin: " . $request_origin);
 header("Access-Control-Allow-Credentials: true");
 header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With, " . $app_secret_header);
+header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With, X-App-Secret"); // 把X-App-Secret加回来以防万一
 
+// 处理CORS预检请求
 if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
     exit(0);
 }
 
-// --- API业务逻辑从这里开始 ---
-header("Content-Type: application/json; charset=UTF-8");
+// --- 您的API业务逻辑从这里开始 ---
 
-function send_response($success, $message, $data = null) {
-    http_response_code($success ? 200 : 400);
-    $response = ["success" => $success, "message" => $message];
-    if ($data) {
-        $response['data'] = $data;
-    }
-    echo json_encode($response);
-    exit;
+// 引入数据库连接
+require_once '../db_connect.php';
+
+// 只处理POST请求
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    http_response_code(405); // Method Not Allowed
+    echo json_encode(['success' => false, 'message' => '仅允许POST请求']);
+    exit();
 }
 
-$db = null;
+$data = json_decode(file_get_contents('php://input'), true);
+$userId = $data['userId'] ?? null;
+$pointsChange = $data['pointsChange'] ?? null;
+
+if ($userId === null || $pointsChange === null) {
+    http_response_code(400); // Bad Request
+    echo json_encode(['success' => false, 'message' => '缺少userId或pointsChange参数']);
+    exit();
+}
+
+if (!is_numeric($userId) || !is_numeric($pointsChange)) {
+    http_response_code(400); // Bad Request
+    echo json_encode(['success' => false, 'message' => 'userId和pointsChange必须是数字']);
+    exit();
+}
+
 try {
-    $db = new SQLite3(__DIR__ . '/../db/user.db');
-    $action = $_GET['action'] ?? '';
-    $data = json_decode(file_get_contents("php://input"), true);
+    // 开始事务
+    $pdo->beginTransaction();
 
-    if ($action === 'search') {
-        $phone = $data['phone'] ?? '';
-        if (empty($phone)) {
-            send_response(false, "未提供手机号");
-        }
-        $stmt = $db->prepare("SELECT id, phone FROM users WHERE phone = :phone");
-        $stmt->bindValue(':phone', $phone, SQLITE3_TEXT);
-        $result = $stmt->execute()->fetchArray(SQLITE3_ASSOC);
-        
-        if ($result) {
-            send_response(true, "查询成功", $result);
-        } else {
-            send_response(false, "未找到该手机号对应的用户");
-        }
-    } 
-    
-    elseif ($action === 'transfer') {
-        $from_phone = $data['from'] ?? '';
-        $to_phone = $data['to'] ?? '';
-        $amount = filter_var($data['amount'] ?? 0, FILTER_VALIDATE_INT);
+    // 1. 获取当前分数
+    $stmt = $pdo->prepare("SELECT points FROM users WHERE id = ? FOR UPDATE");
+    $stmt->execute([$userId]);
+    $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        if ($from_phone === $to_phone) {
-            send_response(false, "不能给自己转账");
-        }
-        if ($amount === false || $amount <= 0) {
-            send_response(false, "转账积分必须是大于0的整数");
-        }
-
-        // 使用事务确保操作的原子性
-        $db->exec('BEGIN');
-
-        // 验证转出方
-        $stmt_from = $db->prepare("SELECT points FROM users WHERE phone = :phone");
-        $stmt_from->bindValue(':phone', $from_phone, SQLITE3_TEXT);
-        $from_user = $stmt_from->execute()->fetchArray(SQLITE3_ASSOC);
-        
-        if (!$from_user) {
-            $db->exec('ROLLBACK');
-            send_response(false, "转出方账户不存在");
-        }
-        if ($from_user['points'] < $amount) {
-            $db->exec('ROLLBACK');
-            send_response(false, "积分不足");
-        }
-
-        // 验证转入方
-        $stmt_to = $db->prepare("SELECT id FROM users WHERE phone = :phone");
-        $stmt_to->bindValue(':phone', $to_phone, SQLITE3_TEXT);
-        $to_user = $stmt_to->execute()->fetchArray(SQLITE3_ASSOC);
-
-        if (!$to_user) {
-            $db->exec('ROLLBACK');
-            send_response(false, "接收方账户不存在");
-        }
-
-        // 执行转账
-        $update_from = $db->prepare("UPDATE users SET points = points - :amount WHERE phone = :phone");
-        $update_from->bindValue(':amount', $amount, SQLITE3_INTEGER);
-        $update_from->bindValue(':phone', $from_phone, SQLITE3_TEXT);
-        $update_from->execute();
-
-        $update_to = $db->prepare("UPDATE users SET points = points + :amount WHERE phone = :phone");
-        $update_to->bindValue(':amount', $amount, SQLITE3_INTEGER);
-        $update_to->bindValue(':phone', $to_phone, SQLITE3_TEXT);
-        $update_to->execute();
-        
-        $db->exec('COMMIT');
-        send_response(true, "积分赠送成功");
-    } 
-    
-    else {
-        send_response(false, "未知的操作请求");
+    if (!$user) {
+        $pdo->rollBack();
+        http_response_code(404); // Not Found
+        echo json_encode(['success' => false, 'message' => '用户不存在']);
+        exit();
     }
 
-} catch (Exception $e) {
-    if ($db) {
-        $db->exec('ROLLBACK'); // 如果在事务中发生异常，则回滚
-    }
-    send_response(false, "服务器内部错误: " . $e->getMessage());
-} finally {
-    if ($db) {
-        $db->close();
-    }
+    $currentPoints = $user['points'];
+    $newPoints = $currentPoints + $pointsChange;
+
+    // 2. 更新分数
+    $stmt = $pdo->prepare("UPDATE users SET points = ? WHERE id = ?");
+    $stmt->execute([$newPoints, $userId]);
+
+    // 提交事务
+    $pdo->commit();
+
+    echo json_encode([
+        'success' => true,
+        'message' => '分数更新成功',
+        'newPoints' => $newPoints
+    ]);
+
+} catch (PDOException $e) {
+    // 如果发生错误，回滚事务
+    $pdo->rollBack();
+    http_response_code(500); // Internal Server Error
+    echo json_encode(['success' => false, 'message' => '数据库操作失败: ' . $e->getMessage()]);
 }

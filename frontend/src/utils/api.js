@@ -1,6 +1,5 @@
-// 我们约定的后端域名和秘密暗号
+// 我们约定的后端域名
 const API_BASE_URL = 'https://9525.ip-ddns.com/api';
-const APP_SECRET_KEY = 'Xla2M666amiV9QehKwOTDJb8uvkozemr'; // 确保这个和PHP里的一样
 
 /**
  * 一个封装了 fetch 的通用 API 请求函数
@@ -15,8 +14,6 @@ export const apiRequest = async (endpoint, options = {}) => {
     // 准备默认的headers
     const headers = {
         'Content-Type': 'application/json',
-        // 【核心】: 在这里统一添加我们的秘密暗号
-        'X-App-Secret': APP_SECRET_KEY,
         // 如果有其他的header，也在这里合并
         ...options.headers,
     };

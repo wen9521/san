@@ -1,6 +1,7 @@
 import React, { createContext, useState, useContext, useCallback } from 'react';
 import { getAIBestArrangement, calculateAllScores, sortCardsByRank } from '../utils/thirteenLogic';
 import { dealAndShuffle } from '../utils/deal';
+import DutouDialog from '../components/DutouDialog';
 
 const GameContext = createContext();
 
@@ -10,6 +11,7 @@ export const GameProvider = ({ children }) => {
     const [players, setPlayers] = useState([]);
     const [isGameActive, setIsGameActive] = useState(false);
     const [comparisonResult, setComparisonResult] = useState(null);
+    const [isDutouDialogOpen, setDutouDialogOpen] = useState(false);
 
     // 独头相关
     const [dutouCurrent, setDutouCurrent] = useState({}); // { [playerId]: { score } }
@@ -108,12 +110,15 @@ export const GameProvider = ({ children }) => {
         return { success: false, message: "请等待所有玩家准备好" };
     };
 
+    const openDutouDialog = () => setDutouDialogOpen(true);
+
     // 独头相关
     const chooseDutouScore = (myId, score) => {
         setDutouCurrent(prev => ({
             ...prev,
             [myId]: { score }
         }));
+        setDutouDialogOpen(false);
     };
 
     const challengeDutou = (dutouPlayerId, challengerId, challengerName) => {
@@ -162,7 +167,17 @@ export const GameProvider = ({ children }) => {
         dutouHistory,
         chooseDutouScore,
         challengeDutou,
+        openDutouDialog,
     };
 
-    return <GameContext.Provider value={value}>{children}</GameContext.Provider>;
+    return (
+        <GameContext.Provider value={value}>
+            {children}
+            <DutouDialog
+                open={isDutouDialogOpen}
+                onClose={() => setDutouDialogOpen(false)}
+                onSelectScore={(score) => chooseDutouScore('player', score)}
+            />
+        </GameContext.Provider>
+    );
 };

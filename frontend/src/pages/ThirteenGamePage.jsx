@@ -4,7 +4,6 @@ import { useLocation, useNavigate } from 'react-router-dom';
 
 import { useGame } from '../context/GameContext';
 import PlayerStatus from '../components/PlayerStatus';
-import DutouDialog from '../components/DutouDialog';
 import { GameRow } from '../components/GameRow';
 import { sortCardsByRank } from '../utils/thirteenLogic';
 import '../styles/App.css';
@@ -15,10 +14,9 @@ function ThirteenGamePage() {
     const {
         players, isGameActive, startOfflineGame, resetGame, updatePlayerRows,
         autoArrangePlayerHand, startComparison,
-        dutouCurrent, dutouHistory, chooseDutouScore, challengeDutou
+        dutouCurrent, dutouHistory, chooseDutouScore, challengeDutou, openDutouDialog
     } = useGame();
     const [selectedCardIds, setSelectedCardIds] = useState([]);
-    const [showDutouDialog, setShowDutouDialog] = useState(false);
 
     const myId = 'player';
     const player = players.find(p => p.id === myId);
@@ -34,11 +32,6 @@ function ThirteenGamePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    const handleDutouClick = () => setShowDutouDialog(true);
-    const handleSelectDutouScore = (score) => {
-        chooseDutouScore(myId, score);
-        setShowDutouDialog(false);
-    };
     const handleDutouScoreClick = (dutouPlayerId, score) => {
         if (dutouPlayerId === myId) return; // 不能应战自己的独头
         const challenger = players.find(p => p.id === myId);
@@ -126,7 +119,7 @@ function ThirteenGamePage() {
                     myId={myId}
                     dutouCurrent={dutouCurrent}
                     dutouHistory={dutouHistory}
-                    onDutouClick={handleDutouClick}
+                    onDutouClick={openDutouDialog}
                     onDutouScoreClick={handleDutouScoreClick}
                 />
                 <Stack spacing={2} sx={{ flexGrow: 1, justifyContent: 'center' }}>
@@ -138,11 +131,6 @@ function ThirteenGamePage() {
                     <Button variant="contained" color="primary" onClick={autoArrangePlayerHand}>智能分牌</Button>
                     <Button variant="contained" color="success" onClick={handleStartComparison}>开始比牌</Button>
                 </Stack>
-                <DutouDialog
-                    open={showDutouDialog}
-                    onClose={() => setShowDutouDialog(false)}
-                    onSelectScore={handleSelectDutouScore}
-                />
             </Box>
         </Box>
     );

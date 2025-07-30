@@ -7,7 +7,8 @@ $allowed_web_origins = [
     // 'http://localhost:5173' // 如果有本地开发环境，可以取消此行注释
 ];
 $app_secret_header = 'X-App-Secret';
-$app_secret_value = 'your-super-secret-key-12345'; // 和前端设置的“暗号”必须完全一样
+// 已更新为更复杂的密钥
+$app_secret_value = 'Xla2M666amiV9QehKwOTDJb8uvkozemr'; 
 
 $is_request_allowed = false;
 $request_origin = isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : '';
@@ -74,7 +75,7 @@ if (json_last_error() !== JSON_ERROR_NONE) {
 $phone = $input['phone'] ?? '';
 $password = $input['password'] ?? '';
 
-if (!preg_match('/^1\d{10}$/', $phone)) {
+if (!preg_match('/^1d{10}$/', $phone)) {
     send_response(false, "手机号格式不正确，请输入11位数字");
 }
 if (strlen($password) < 6) {

@@ -5,7 +5,8 @@ import PointsDialog from '../components/PointsDialog';
 export const AuthContext = createContext();
 
 const API_BASE = "https://9525.ip-ddns.com/api";
-const APP_SECRET = 'your-super-secret-key-12345'; // 定义应用密钥
+// 已更新为更复杂的密钥
+const APP_SECRET = 'Xla2M666amiV9QehKwOTDJb8uvkozemr'; 
 
 // 封装 fetch 请求，自动添加密钥
 const fetchWithAuth = async (url, options = {}) => {

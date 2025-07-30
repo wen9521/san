@@ -6,7 +6,8 @@ $allowed_web_origins = [
     'https://gewe.dpdns.org',
 ];
 $app_secret_header = 'X-App-Secret';
-$app_secret_value = 'your-super-secret-key-12345';
+// 已更新为更复杂的密钥
+$app_secret_value = 'Xla2M666amiV9QehKwOTDJb8uvkozemr';
 
 $is_request_allowed = false;
 $request_origin = isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : '';

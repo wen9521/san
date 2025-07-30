@@ -19,7 +19,7 @@ export function AuthProvider({ children }) {
 
   const login = async (phone, password) => {
     try {
-      const res = await apiRequest('/login.php', {
+      const res = await apiRequest('login.php', {
         method: 'POST',
         body: JSON.stringify({ phone, password })
       });
@@ -36,7 +36,7 @@ export function AuthProvider({ children }) {
 
   const register = async (phone, password) => {
     try {
-      const res = await apiRequest('/register.php', {
+      const res = await apiRequest('register.php', {
         method: 'POST',
         body: JSON.stringify({ phone, password })
       });
@@ -61,7 +61,7 @@ export function AuthProvider({ children }) {
 
   const searchUserByPhone = async (phone) => {
     try {
-        return await apiRequest('/points.php?action=search', {
+        return await apiRequest('points.php?action=search', {
             method: 'POST',
             body: JSON.stringify({ phone })
         });
@@ -73,7 +73,7 @@ export function AuthProvider({ children }) {
   const transferPoints = async (toPhone, amount) => {
     if (!user) return { success: false, message: '请先登录' };
     try {
-        const res = await apiRequest('/points.php?action=transfer', {
+        const res = await apiRequest('points.php?action=transfer', {
             method: 'POST',
             body: JSON.stringify({ from: user.phone, to: toPhone, amount })
         });

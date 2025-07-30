@@ -41,6 +41,8 @@ const ComparisonPage = () => {
   const navigate = useNavigate();
   const { comparisonResult, players, resetGame } = useGame();
 
+  console.log("ComparisonPage: Rendering with comparisonResult:", comparisonResult); // 添加日志
+
   useEffect(() => {
     return () => {
       resetGame();

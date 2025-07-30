@@ -85,19 +85,20 @@ export const GameProvider = ({ children }) => {
              if (player && !player.isReady) {
                 const bestRows = getAIBestArrangement(player.hand);
                 finalPlayers = players.map(p => p.id === 'player' ? { ...p, rows: bestRows, isReady: true } : p);
-                setPlayers(finalPlayers);
+                setPlayers(finalPlayers); // 确保状态被更新
              }
         } else {
             // 在线模式，如果玩家未准备，则设置为准备状态
             const player = players.find(p => p.id === 'player');
             if(player && !player.isReady) {
                  finalPlayers = players.map(p => p.id === 'player' ? { ...p, isReady: true } : p);
-                 setPlayers(finalPlayers);
+                 setPlayers(finalPlayers); // 确保状态被更新
             }
         }
 
         if (finalPlayers.every(p => p.isReady)) {
             const results = calculateAllScores(finalPlayers);
+            console.log("GameContext: Setting comparisonResult to:", results); // 添加日志
             setComparisonResult(results);
             return { success: true };
         }

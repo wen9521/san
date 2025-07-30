@@ -1,5 +1,5 @@
 import React, { createContext, useState, useContext, useCallback } from 'react';
-import { getAIBestArrangement, calculateAllScores, sortCardsByRank } from '../utils/thirteenLogic';
+import { getAIBestArrangement, calculateAllScores } from '../utils/thirteenLogic';
 import { dealAndShuffle } from '../utils/deal';
 import DutouDialog from '../components/DutouDialog';
 
@@ -12,14 +12,14 @@ export const GameProvider = ({ children }) => {
     const [isGameActive, setIsGameActive] = useState(false);
     const [comparisonResult, setComparisonResult] = useState(null);
     const [isDutouDialogOpen, setDutouDialogOpen] = useState(false);
+    const [isOfflineMode, setIsOfflineMode] = useState(false);
 
-    // 独头相关
-    const [dutouCurrent, setDutouCurrent] = useState({}); // { [playerId]: { score } }
-    const [dutouHistory, setDutouHistory] = useState({}); // { [playerId]: [{ challengerId, challengerName, score }] }
+    const [dutouCurrent, setDutouCurrent] = useState({});
+    const [dutouHistory, setDutouHistory] = useState({});
 
-    const setupGame = (playerHand, ai1Hand, ai2Hand, ai3Hand) => {
+    const setupGame = useCallback((playerHand, ai1Hand, ai2Hand, ai3Hand, offlineMode = false) => {
         const initialPlayers = [
-            { id: 'player', name: '你', hand: playerHand, rows: getAIBestArrangement(playerHand), isReady: false },
+            { id: 'player', name: '你', hand: playerHand, rows: getAIBestArrangement(playerHand), isReady: offlineMode },
             { id: 'ai1', name: '小明', hand: ai1Hand, rows: getAIBestArrangement(ai1Hand), isReady: true },
             { id: 'ai2', name: '小红', hand: ai2Hand, rows: getAIBestArrangement(ai2Hand), isReady: true },
             { id: 'ai3', name: '小刚', hand: ai3Hand, rows: getAIBestArrangement(ai3Hand), isReady: true },
@@ -29,9 +29,15 @@ export const GameProvider = ({ children }) => {
         setComparisonResult(null);
         setDutouCurrent({});
         setDutouHistory({});
-    };
+        setIsOfflineMode(offlineMode);
+    }, []);
 
-    const startOnlineGame = (allCards) => {
+    const startOfflineGame = useCallback(() => {
+        const hands = dealAndShuffle();
+        setupGame(hands.player, hands.ai1, hands.ai2, hands.ai3, true);
+    }, [setupGame]);
+
+    const startOnlineGame = useCallback((allCards) => {
         if (allCards && allCards.length === 52) {
             const hands = {
                 player: allCards.slice(0, 13),
@@ -39,14 +45,9 @@ export const GameProvider = ({ children }) => {
                 ai2: allCards.slice(26, 39),
                 ai3: allCards.slice(39, 52),
             };
-            setupGame(hands.player, hands.ai1, hands.ai2, hands.ai3);
+            setupGame(hands.player, hands.ai1, hands.ai2, hands.ai3, false);
         }
-    };
-
-    const startOfflineGame = useCallback(() => {
-        const hands = dealAndShuffle();
-        setupGame(hands.player, hands.ai1, hands.ai2, hands.ai3);
-    }, []);
+    }, [setupGame]);
 
     const resetGame = useCallback(() => {
         setPlayers([]);
@@ -54,11 +55,12 @@ export const GameProvider = ({ children }) => {
         setComparisonResult(null);
         setDutouCurrent({});
         setDutouHistory({});
+        setIsOfflineMode(false);
     }, []);
 
     const updatePlayerRows = (newRows) => {
         setPlayers(prev => prev.map(p =>
-            p.id === 'player' ? { ...p, rows: newRows } : p
+            p.id === 'player' ? { ...p, rows: newRows, isReady: false } : p
         ));
     };
 
@@ -67,107 +69,62 @@ export const GameProvider = ({ children }) => {
             const player = prev.find(p => p.id === 'player');
             if (player) {
                 const bestRows = getAIBestArrangement(player.hand);
-                return prev.map(p => p.id === 'player' ? { ...p, rows: bestRows, isReady: false } : p);
+                const isPlayerReady = isOfflineMode; // 在试玩模式下，智能理牌后即准备好
+                return prev.map(p => p.id === 'player' ? { ...p, rows: bestRows, isReady: isPlayerReady } : p);
             }
             return prev;
         });
     };
 
-    const setPlayerReady = () => {
-        let updatedPlayers = [];
-        setPlayers(prev => {
-            updatedPlayers = prev.map(p =>
-                p.id === 'player' ? { ...p, isReady: true } : p
-            );
-            return updatedPlayers;
-        });
-        return updatedPlayers;
-    };
-
-    const calculateResults = (currentPlayers) => {
-        if (currentPlayers.every(p => p.isReady)) {
-            const results = calculateAllScores(currentPlayers);
-            setComparisonResult(results);
-            return true;
-        }
-        return false;
-    };
-
     const startComparison = () => {
-        let updatedPlayers = [];
-        setPlayers(prev => {
-            updatedPlayers = prev.map(p =>
-                p.id === 'player' ? { ...p, isReady: true } : p
-            );
-            return updatedPlayers;
-        });
-        const allPlayers = updatedPlayers.length > 0 ? updatedPlayers : players;
-        if (allPlayers.every(p => p.isReady)) {
-            const results = calculateAllScores(allPlayers);
+        let finalPlayers = players;
+        
+        // 在试玩模式下，强制使用最佳牌型并设置为准备状态
+        if (isOfflineMode) {
+             const player = players.find(p => p.id === 'player');
+             if (player && !player.isReady) {
+                const bestRows = getAIBestArrangement(player.hand);
+                finalPlayers = players.map(p => p.id === 'player' ? { ...p, rows: bestRows, isReady: true } : p);
+                setPlayers(finalPlayers);
+             }
+        } else {
+            // 在线模式，如果玩家未准备，则设置为准备状态
+            const player = players.find(p => p.id === 'player');
+            if(player && !player.isReady) {
+                 finalPlayers = players.map(p => p.id === 'player' ? { ...p, isReady: true } : p);
+                 setPlayers(finalPlayers);
+            }
+        }
+
+        if (finalPlayers.every(p => p.isReady)) {
+            const results = calculateAllScores(finalPlayers);
             setComparisonResult(results);
             return { success: true };
         }
-        return { success: false, message: "请等待所有玩家准备好" };
+        
+        return { success: false, message: "所有玩家尚未准备就绪。" };
     };
 
     const openDutouDialog = () => setDutouDialogOpen(true);
-
-    // 独头相关
     const chooseDutouScore = (myId, score) => {
-        setDutouCurrent(prev => ({
-            ...prev,
-            [myId]: { score }
-        }));
+        setDutouCurrent(prev => ({ ...prev, [myId]: { score } }));
         setDutouDialogOpen(false);
     };
-
     const challengeDutou = (dutouPlayerId, challengerId, challengerName) => {
         setDutouCurrent(prev => {
             const score = prev[dutouPlayerId]?.score;
             if (!score) return prev;
             const newCurr = { ...prev };
             delete newCurr[dutouPlayerId];
-            setDutouHistory(history => {
-                const arr = history[dutouPlayerId] || [];
-                const idx = arr.findIndex(x => x.challengerId === challengerId);
-                if (idx >= 0) {
-                    const updated = [...arr];
-                    updated[idx] = {
-                        ...updated[idx],
-                        score: updated[idx].score + score
-                    };
-                    return {
-                        ...history,
-                        [dutouPlayerId]: updated
-                    };
-                } else {
-                    return {
-                        ...history,
-                        [dutouPlayerId]: [...arr, { challengerId, challengerName, score }]
-                    };
-                }
-            });
+            setDutouHistory(h => ({ ...h, [dutouPlayerId]: [...(h[dutouPlayerId] || []), { challengerId, challengerName, score }] }));
             return newCurr;
         });
     };
 
     const value = {
-        players,
-        isGameActive,
-        comparisonResult,
-        startOnlineGame,
-        startOfflineGame,
-        resetGame,
-        updatePlayerRows,
-        autoArrangePlayerHand,
-        setPlayerReady,
-        calculateResults,
-        startComparison,
-        dutouCurrent,
-        dutouHistory,
-        chooseDutouScore,
-        challengeDutou,
-        openDutouDialog,
+        players, isGameActive, comparisonResult, startOnlineGame, startOfflineGame, resetGame, updatePlayerRows,
+        autoArrangePlayerHand, startComparison, dutouCurrent, dutouHistory, chooseDutouScore, challengeDutou,
+        openDutouDialog, isOfflineMode,
     };
 
     return (

@@ -5,6 +5,7 @@ import { PokerCard } from './PokerCard';
 export const GameRow = ({ id, cards, label, onRowClick, selectedCardIds, onCardClick, typeName }) => {
     const CARD_WIDTH = 80;
     const CARD_HEIGHT = 112;
+    const SELECTED_LIFT = 20; // 定义一个常量表示选中时向上移动的距离
     const containerRef = useRef(null);
     const [overlap, setOverlap] = useState(40);
 
@@ -14,7 +15,7 @@ export const GameRow = ({ id, cards, label, onRowClick, selectedCardIds, onCardC
 
             const containerWidth = containerRef.current.offsetWidth;
             const numCards = cards.length;
-            const reservedSpace = CARD_WIDTH / 1.5; // Reserve space for text and drop zone
+            const reservedSpace = CARD_WIDTH / 1.5;
             const availableWidth = containerWidth - reservedSpace;
 
             if (numCards <= 1) {
@@ -25,17 +26,24 @@ export const GameRow = ({ id, cards, label, onRowClick, selectedCardIds, onCardC
             const totalCardsWidth = numCards * CARD_WIDTH;
 
             if (totalCardsWidth <= availableWidth) {
-                setOverlap(5); // A small, fixed overlap when cards fit
+                setOverlap(5);
             } else {
                 const requiredOverlap = (totalCardsWidth - availableWidth) / (numCards - 1);
-                setOverlap(Math.max(20, requiredOverlap)); // Ensure a minimum overlap
+                setOverlap(Math.max(20, requiredOverlap));
             }
         };
 
         calculateOverlap();
-        window.addEventListener('resize', calculateOverlap);
+        const resizeObserver = new ResizeObserver(calculateOverlap);
+        if (containerRef.current) {
+            resizeObserver.observe(containerRef.current);
+        }
 
-        return () => window.removeEventListener('resize', calculateOverlap);
+        return () => {
+            if (containerRef.current) {
+                resizeObserver.unobserve(containerRef.current);
+            }
+        };
     }, [cards.length, CARD_WIDTH]);
 
     return (
@@ -43,17 +51,18 @@ export const GameRow = ({ id, cards, label, onRowClick, selectedCardIds, onCardC
             sx={{
                 background: 'rgba(255, 255, 255, 0.1)',
                 borderRadius: '12px',
-                minHeight: `${CARD_HEIGHT + 20}px`,
+                minHeight: `${CARD_HEIGHT + 20 + SELECTED_LIFT}px`, // 增加高度以容纳弹出的牌
                 display: 'flex',
                 alignItems: 'center',
-                padding: '10px 15px',
+                padding: `10px 15px`,
+                paddingTop: `${SELECTED_LIFT + 10}px`, // 增加顶部内边距
                 cursor: 'pointer',
                 transition: 'background-color 0.2s ease',
                 '&:hover': {
                     background: 'rgba(0, 255, 0, 0.15)',
                 },
                 position: 'relative',
-                overflow: 'hidden'
+                // overflow: 'hidden' // 移除此行以允许牌向上溢出
             }}
             onClick={() => onRowClick(id)}
         >
@@ -68,29 +77,32 @@ export const GameRow = ({ id, cards, label, onRowClick, selectedCardIds, onCardC
                     height: `${CARD_HEIGHT}px`,
                 }}
             >
-                {cards.map((card, index) => (
-                    <Box 
-                        key={card.id}
-                        sx={{
-                            position: 'absolute',
-                            left: `${index * (CARD_WIDTH - overlap)}px`,
-                            zIndex: selectedCardIds?.includes(card.id) ? 100 + index : 10 + index, // Higher z-index for cards
-                            transition: 'left 0.3s ease, transform 0.2s ease',
-                            transform: selectedCardIds?.includes(card.id) ? 'translateY(-15px)' : 'none',
-                        }}
-                    >
-                        <PokerCard 
-                            card={card} 
-                            isSelected={selectedCardIds?.includes(card.id)} 
-                            onClick={onCardClick}
-                            width={CARD_WIDTH}
-                            height={CARD_HEIGHT}
-                        />
-                    </Box>
-                ))}
+                {cards.map((card, index) => {
+                    const isSelected = selectedCardIds?.includes(card.id);
+                    return (
+                        <Box 
+                            key={card.id}
+                            sx={{
+                                position: 'absolute',
+                                left: `${index * (CARD_WIDTH - overlap)}px`,
+                                zIndex: isSelected ? 1000 : 10 + index, // 大幅提高选中牌的 z-index
+                                transition: 'left 0.3s ease, transform 0.2s ease, z-index 0s',
+                                transform: isSelected ? `translateY(-${SELECTED_LIFT}px)` : 'none',
+                            }}
+                        >
+                            <PokerCard 
+                                card={card} 
+                                isSelected={isSelected} 
+                                onClick={onCardClick}
+                                width={CARD_WIDTH}
+                                height={CARD_HEIGHT}
+                            />
+                        </Box>
+                    );
+                })}
             </Box>
 
-            {/* Label on the right, under the cards */}
+            {/* Label on the right */}
             <Box sx={{ 
                 position: 'absolute',
                 right: '25px',
@@ -104,7 +116,7 @@ export const GameRow = ({ id, cards, label, onRowClick, selectedCardIds, onCardC
                 flexDirection: 'column', 
                 alignItems: 'center',
                 justifyContent: 'center',
-                zIndex: 1, // Lower z-index
+                zIndex: 1, // 确保标签在牌的下方
             }}>
                 <Typography variant="h6" sx={{ mb: 0, fontSize: '1.2rem', fontWeight: 'bold' }}>
                     {label}

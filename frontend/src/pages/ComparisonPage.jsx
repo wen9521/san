@@ -129,21 +129,9 @@ const ComparisonPage = () => {
             </Box>
 
             <Box sx={{ flexGrow: 1, display: 'flex', justifyContent: 'space-around', alignItems: 'center' }}>
-              <Box>
-                <Typography variant="caption" display="block" align="center" gutterBottom>头道</Typography>
-                <StackedHand cards={player.frontHand} />
-                <Typography variant="body2" align="center" sx={{ mt: 1, color: '#b0bec5' }}>{player.front?.type || ''}</Typography>
-              </Box>
-              <Box>
-                <Typography variant="caption" display="block" align="center" gutterBottom>中道</Typography>
-                <StackedHand cards={player.middleHand} />
-                <Typography variant="body2" align="center" sx={{ mt: 1, color: '#b0bec5' }}>{player.middle?.type || ''}</Typography>
-              </Box>
-              <Box>
-                <Typography variant="caption" display="block" align="center" gutterBottom>后道</Typography>
-                <StackedHand cards={player.backHand} />
-                <Typography variant="body2" align="center" sx={{ mt: 1, color: '#b0bec5' }}>{player.back?.type || ''}</Typography>
-              </Box>
+              <StackedHand cards={player.frontHand} />
+              <StackedHand cards={player.middleHand} />
+              <StackedHand cards={player.backHand} />
             </Box>
           </Paper>
         ))}

@@ -1,4 +1,5 @@
 import React, { createContext, useState, useEffect } from 'react';
+import AuthDialog from '../components/AuthDialog';
 
 export const AuthContext = createContext();
 
@@ -6,11 +7,16 @@ const API_BASE = "https://serv00.com/api"; // 改成你的 PHP API 路径
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
+  const [isAuthDialogOpen, setAuthDialogOpen] = useState(false);
 
   useEffect(() => {
-    // 尝试自动登录
-    const saved = localStorage.getItem('user');
-    if (saved) setUser(JSON.parse(saved));
+    const savedUser = localStorage.getItem('user');
+    if (savedUser) {
+      setUser(JSON.parse(savedUser));
+    } else {
+      // 如果没有用户信息，可以决定是否自动弹出登录框
+      // setAuthDialogOpen(true);
+    }
   }, []);
 
   const login = async (phone, password) => {
@@ -22,6 +28,7 @@ export function AuthProvider({ children }) {
     if (res && res.success) {
       setUser(res.data);
       localStorage.setItem('user', JSON.stringify(res.data));
+      setAuthDialogOpen(false); // 关闭对话框
     }
     return res || { success: false, message: '网络异常' };
   };
@@ -35,6 +42,7 @@ export function AuthProvider({ children }) {
     if (res && res.success) {
       setUser(res.data);
       localStorage.setItem('user', JSON.stringify(res.data));
+      setAuthDialogOpen(false); // 关闭对话框
     }
     return res || { success: false, message: '网络异常' };
   };
@@ -42,7 +50,11 @@ export function AuthProvider({ children }) {
   const logout = () => {
     setUser(null);
     localStorage.removeItem('user');
+    // 退出后可以视情况决定是否弹出登录框
+    // setAuthDialogOpen(true);
   };
+
+  const openAuthDialog = () => setAuthDialogOpen(true);
 
   const searchUserByPhone = async (phone) => {
     const res = await fetch(`${API_BASE}/points.php?action=search`, {
@@ -61,15 +73,17 @@ export function AuthProvider({ children }) {
       body: JSON.stringify({ from: user.phone, to: toPhone, amount })
     }).then(r => r.json()).catch(() => null);
     if (res && res.success) {
-      setUser({ ...user, points: user.points - amount });
-      localStorage.setItem('user', JSON.stringify({ ...user, points: user.points - amount }));
+      const updatedUser = { ...user, points: user.points - amount };
+      setUser(updatedUser);
+      localStorage.setItem('user', JSON.stringify(updatedUser));
     }
     return res || { success: false, message: '网络异常' };
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, searchUserByPhone, transferPoints }}>
+    <AuthContext.Provider value={{ user, login, register, logout, openAuthDialog, searchUserByPhone, transferPoints }}>
       {children}
+      <AuthDialog open={isAuthDialogOpen} onClose={() => setAuthDialogOpen(false)} />
     </AuthContext.Provider>
   );
 }

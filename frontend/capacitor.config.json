@@ -8,7 +8,8 @@
   "server": {
     "androidScheme": "https",
     "cleartext": true,
-    
-    "hostname": "localhost"
+    "allowNavigation": [
+      "9525.ip-ddns.com"
+    ]
   }
 }

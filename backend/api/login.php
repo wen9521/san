@@ -1,5 +1,6 @@
 <?php
-$origin = 'https://gewe.dpdns.org';
+// 允许所有来源的请求，用于调试
+$origin = '*';
 
 // 解决CORS预检请求问题
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
@@ -13,6 +14,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 header("Access-Control-Allow-Origin: " . $origin);
 header("Content-Type: application/json; charset=UTF-8");
 
+// ... (剩余代码保持不变)
 // 响应函数
 function send_response($success, $message, $data = null) {
     http_response_code($success ? 200 : 400);

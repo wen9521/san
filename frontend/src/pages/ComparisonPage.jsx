@@ -1,6 +1,6 @@
 import React, { useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Box, Typography, Button, Paper } from '@mui/material';
+import { Box, Typography, Button, Paper, CircularProgress } from '@mui/material';
 import { useGame } from '../context/GameContext';
 import '../styles/App.css'; 
 
@@ -41,7 +41,6 @@ const ComparisonPage = () => {
   const navigate = useNavigate();
   const { comparisonResult, players, resetGame } = useGame();
 
-  // 在组件卸载时调用 resetGame，确保状态被清理
   useEffect(() => {
     return () => {
       resetGame();
@@ -49,22 +48,11 @@ const ComparisonPage = () => {
   }, [resetGame]);
 
   const handleReturnHome = () => {
-    // 在导航前，不需要手动调用resetGame，因为卸载时会自动调用
     navigate('/'); 
   };
   
-  if (!comparisonResult) {
-    return (
-      <Box className="page-container">
-        <Typography variant="h5" color="white" gutterBottom>
-          没有比牌结果可显示。
-        </Typography>
-        <Button variant="contained" onClick={handleReturnHome}>返回主页</Button>
-      </Box>
-    );
-  }
-
   const enrichedPlayers = useMemo(() => {
+    if (!comparisonResult) return [];
     return players.map(player => {
       const result = comparisonResult.scores.find(s => s.playerId === player.id) || {};
       return {
@@ -75,7 +63,22 @@ const ComparisonPage = () => {
         backHand: player.rows.back
       };
     });
-  }, [players, comparisonResult.scores]);
+  }, [players, comparisonResult]);
+
+  if (!comparisonResult) {
+    return (
+      <Box className="page-container" sx={{ textAlign: 'center' }}>
+        <CircularProgress sx={{ mb: 2 }} />
+        <Typography variant="h5" color="white" gutterBottom>
+          正在等待比牌结果...
+        </Typography>
+        <Typography color="text.secondary">
+          如果没有自动跳转，请确保所有玩家都已准备好。
+        </Typography>
+        <Button sx={{ mt: 3 }} variant="contained" onClick={handleReturnHome}>返回主页</Button>
+      </Box>
+    );
+  }
 
   return (
     <Box 
@@ -148,7 +151,7 @@ const ComparisonPage = () => {
 
       <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
         <Button variant="contained" size="large" onClick={handleReturnHome}>
-          返回主页
+          重新开始
         </Button>
       </Box>
     </Box>

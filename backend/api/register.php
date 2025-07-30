@@ -1,37 +1,82 @@
 <?php
 header("Access-Control-Allow-Origin: *");
 header("Content-Type: application/json; charset=UTF-8");
-$data = json_decode(file_get_contents("php://input"), true);
-if (!isset($data['phone']) || !isset($data['password'])) {
-    echo json_encode(["success"=>false,"message"=>"缺少参数"]);
+header("Access-Control-Allow-Methods: POST");
+header("Access-Control-Max-Age: 3600");
+header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
+
+// 响应函数
+function send_response($success, $message, $data = null) {
+    http_response_code($success ? 201 : 400); // 201 for created
+    $response = ["success" => $success, "message" => $message];
+    if ($data) {
+        $response['data'] = $data;
+    }
+    echo json_encode($response);
     exit;
 }
-$phone = $data['phone'];
-$password = $data['password'];
-if (!preg_match('/^1d{10}$/', $phone)) {
-    echo json_encode(["success"=>false,"message"=>"手机号格式错误"]);
-    exit;
+
+// 接收和校验输入
+$input = json_decode(file_get_contents("php://input"), true);
+if (json_last_error() !== JSON_ERROR_NONE) {
+    send_response(false, "无效的请求格式");
+}
+
+$phone = $input['phone'] ?? '';
+$password = $input['password'] ?? '';
+
+if (!preg_match('/^1\d{10}$/', $phone)) {
+    send_response(false, "手机号格式不正确，请输入11位数字");
 }
 if (strlen($password) < 6) {
-    echo json_encode(["success"=>false,"message"=>"密码至少6位"]);
-    exit;
+    send_response(false, "密码至少需要6位");
 }
 
-// 数据库
-$db = new SQLite3(__DIR__ . '/../db/user.db');
-$db->exec("CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, phone TEXT UNIQUE, password TEXT, points INTEGER)");
-$exists = $db->querySingle("SELECT count(*) FROM users WHERE phone='$phone'");
-if ($exists) {
-    echo json_encode(["success"=>false,"message"=>"手机号已注册"]);
-    exit;
+// 数据库操作
+try {
+    $db = new SQLite3(__DIR__ . '/../db/user.db');
+    
+    // 检查手机号是否已存在
+    $stmt = $db->prepare("SELECT COUNT(*) as count FROM users WHERE phone = :phone");
+    $stmt->bindValue(':phone', $phone, SQLITE3_TEXT);
+    $result = $stmt->execute()->fetchArray(SQLITE3_ASSOC);
+    if ($result['count'] > 0) {
+        send_response(false, "该手机号已被注册");
+    }
+
+    // 生成唯一的4位数字ID
+    do {
+        $id = str_pad(rand(0, 9999), 4, '0', STR_PAD_LEFT);
+        $stmt = $db->prepare("SELECT COUNT(*) as count FROM users WHERE id = :id");
+        $stmt->bindValue(':id', $id, SQLITE3_TEXT);
+        $idExists = $stmt->execute()->fetchArray(SQLITE3_ASSOC);
+    } while ($idExists['count'] > 0);
+
+    // 创建新用户
+    $hash = password_hash($password, PASSWORD_DEFAULT);
+    $initial_points = 1000;
+    
+    $stmt = $db->prepare("INSERT INTO users (id, phone, password, points) VALUES (:id, :phone, :password, :points)");
+    $stmt->bindValue(':id', $id, SQLITE3_TEXT);
+    $stmt->bindValue(':phone', $phone, SQLITE3_TEXT);
+    $stmt->bindValue(':password', $hash, SQLITE3_TEXT);
+    $stmt->bindValue(':points', $initial_points, SQLITE3_INTEGER);
+    
+    if ($stmt->execute()) {
+        $newUser = [
+            "id" => $id,
+            "phone" => $phone,
+            "points" => $initial_points
+        ];
+        send_response(true, "注册成功", $newUser);
+    } else {
+        send_response(false, "注册失败，请稍后再试");
+    }
+
+} catch (Exception $e) {
+    send_response(false, "服务器内部错误: " . $e->getMessage());
+} finally {
+    if (isset($db)) {
+        $db->close();
+    }
 }
-
-// 生成4位数字ID
-do {
-    $id = str_pad(strval(rand(0, 9999)), 4, '0', STR_PAD_LEFT);
-    $c = $db->querySingle("SELECT count(*) FROM users WHERE id='$id'");
-} while ($c > 0);
-
-$hash = password_hash($password, PASSWORD_DEFAULT);
-$db->exec("INSERT INTO users (id, phone, password, points) VALUES ('$id', '$phone', '$hash', 1000)");
-echo json_encode(["success"=>true,"data"=>["id"=>$id,"phone"=>$phone,"points"=>1000]]);

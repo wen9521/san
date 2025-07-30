@@ -1,21 +1,59 @@
 <?php
 header("Access-Control-Allow-Origin: *");
 header("Content-Type: application/json; charset=UTF-8");
-$data = json_decode(file_get_contents("php://input"), true);
-if (!isset($data['phone']) || !isset($data['password'])) {
-    echo json_encode(["success"=>false,"message"=>"缺少参数"]);
+header("Access-Control-Allow-Methods: POST");
+header("Access-Control-Max-Age: 3600");
+header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
+
+// 响应函数
+function send_response($success, $message, $data = null) {
+    http_response_code($success ? 200 : 400);
+    $response = ["success" => $success, "message" => $message];
+    if ($data) {
+        $response['data'] = $data;
+    }
+    echo json_encode($response);
     exit;
 }
-$phone = $data['phone'];
-$password = $data['password'];
-$db = new SQLite3(__DIR__ . '/../db/user.db');
-$row = $db->querySingle("SELECT * FROM users WHERE phone='$phone'", true);
-if (!$row) {
-    echo json_encode(["success"=>false,"message"=>"账号不存在"]);
-    exit;
+
+// 接收和校验输入
+$input = json_decode(file_get_contents("php://input"), true);
+if (json_last_error() !== JSON_ERROR_NONE) {
+    send_response(false, "无效的请求格式");
 }
-if (!password_verify($password, $row['password'])) {
-    echo json_encode(["success"=>false,"message"=>"密码错误"]);
-    exit;
+
+$phone = $input['phone'] ?? '';
+$password = $input['password'] ?? '';
+
+if (empty($phone) || empty($password)) {
+    send_response(false, "手机号和密码不能为空");
 }
-echo json_encode(["success"=>true,"data"=>["id"=>$row['id'],"phone"=>$row['phone'],"points"=>$row['points']]]]);
+
+// 数据库操作
+try {
+    $db = new SQLite3(__DIR__ . '/../db/user.db');
+    $stmt = $db->prepare("SELECT id, phone, password, points FROM users WHERE phone = :phone");
+    $stmt->bindValue(':phone', $phone, SQLITE3_TEXT);
+    
+    $result = $stmt->execute();
+    $user = $result->fetchArray(SQLITE3_ASSOC);
+
+    if (!$user) {
+        send_response(false, "用户不存在");
+    }
+
+    if (password_verify($password, $user['password'])) {
+        unset($user['password']); // 不返回密码哈希
+        send_response(true, "登录成功", $user);
+    } else {
+        send_response(false, "密码错误");
+    }
+
+} catch (Exception $e) {
+    // 在生产环境中应记录错误日志，而不是直接暴露错误信息
+    send_response(false, "服务器内部错误: " . $e->getMessage());
+} finally {
+    if (isset($db)) {
+        $db->close();
+    }
+}

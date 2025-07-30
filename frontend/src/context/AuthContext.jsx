@@ -4,7 +4,30 @@ import PointsDialog from '../components/PointsDialog';
 
 export const AuthContext = createContext();
 
-const API_BASE = "https://9525.ip-ddns.com/api"; // 改成你的 PHP API 路径
+const API_BASE = "https://9525.ip-ddns.com/api";
+const APP_SECRET = 'your-super-secret-key-12345'; // 定义应用密钥
+
+// 封装 fetch 请求，自动添加密钥
+const fetchWithAuth = async (url, options = {}) => {
+  const headers = {
+    'Content-Type': 'application/json',
+    'X-App-Secret': APP_SECRET,
+    ...options.headers,
+  };
+  
+  try {
+    const response = await fetch(url, { ...options, headers });
+    if (!response.ok) {
+        // 尝试解析错误响应体
+        const errorBody = await response.json().catch(() => ({ message: '无法解析响应' }));
+        return { success: false, message: errorBody.message || `网络错误: ${response.status}` };
+    }
+    return response.json();
+  } catch (error) {
+    return { success: false, message: '网络请求失败' };
+  }
+};
+
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
@@ -19,31 +42,29 @@ export function AuthProvider({ children }) {
   }, []);
 
   const login = async (phone, password) => {
-    const res = await fetch(`${API_BASE}/login.php`, {
+    const res = await fetchWithAuth(`${API_BASE}/login.php`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ phone, password })
-    }).then(r => r.json()).catch(() => null);
+    });
     if (res && res.success) {
       setUser(res.data);
       localStorage.setItem('user', JSON.stringify(res.data));
       setAuthDialogOpen(false);
     }
-    return res || { success: false, message: '网络异常' };
+    return res;
   };
 
   const register = async (phone, password) => {
-    const res = await fetch(`${API_BASE}/register.php`, {
+    const res = await fetchWithAuth(`${API_BASE}/register.php`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ phone, password })
-    }).then(r => r.json()).catch(() => null);
+    });
     if (res && res.success) {
       setUser(res.data);
       localStorage.setItem('user', JSON.stringify(res.data));
       setAuthDialogOpen(false);
     }
-    return res || { success: false, message: '网络异常' };
+    return res;
   };
 
   const logout = () => {
@@ -55,27 +76,24 @@ export function AuthProvider({ children }) {
   const openPointsDialog = () => setPointsDialogOpen(true);
 
   const searchUserByPhone = async (phone) => {
-    const res = await fetch(`${API_BASE}/points.php?action=search`, {
+    return await fetchWithAuth(`${API_BASE}/points.php?action=search`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ phone })
-    }).then(r => r.json()).catch(() => null);
-    return res || { success: false, message: '网络异常' };
+    });
   };
 
   const transferPoints = async (toPhone, amount) => {
     if (!user) return { success: false, message: '请先登录' };
-    const res = await fetch(`${API_BASE}/points.php?action=transfer`, {
+    const res = await fetchWithAuth(`${API_BASE}/points.php?action=transfer`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ from: user.phone, to: toPhone, amount })
-    }).then(r => r.json()).catch(() => null);
+    });
     if (res && res.success) {
       const updatedUser = { ...user, points: user.points - amount };
       setUser(updatedUser);
       localStorage.setItem('user', JSON.stringify(updatedUser));
     }
-    return res || { success: false, message: '网络异常' };
+    return res;
   };
 
   return (

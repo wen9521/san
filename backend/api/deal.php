@@ -1,16 +1,45 @@
 <?php
-// 【CORS 核心修正】: 允许来自任何源的请求。
-// 对于生产环境，您可能希望将其限制为您的应用的特定域名。
-header("Access-Control-Allow-Origin: *");
-header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type, Authorization");
-header('Content-Type: application/json; charset=UTF-8');
+// --- 新的、更健壮的安全与CORS设置 ---
 
-// 如果是OPTIONS预检请求，直接返回成功
-if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
-    http_response_code(200);
-    exit;
+// 【第1步】: 定义信任的来源和我们的秘密暗号
+$allowed_web_origins = [
+    'https://gewe.dpdns.org',
+];
+$app_secret_header = 'X-App-Secret';
+$app_secret_value = 'your-super-secret-key-12345';
+
+$is_request_allowed = false;
+$request_origin = isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : '';
+$server_secret_key = 'HTTP_' . strtoupper(str_replace('-', '_', $app_secret_header));
+$request_secret = isset($_SERVER[$server_secret_key]) ? $_SERVER[$server_secret_key] : '';
+
+// 【第2步】: 安全校验逻辑
+if (in_array($request_origin, $allowed_web_origins)) {
+    $is_request_allowed = true;
+} elseif ($request_secret === $app_secret_value) {
+    $is_request_allowed = true;
+    if (empty($request_origin)) {
+        $request_origin = 'capacitor://localhost'; 
+    }
 }
+
+// 【第3步】: 根据校验结果设置响应头
+if (!$is_request_allowed) {
+    header("HTTP/1.1 403 Forbidden");
+    exit('Forbidden: Invalid origin or missing/incorrect secret.');
+}
+
+header("Access-Control-Allow-Origin: " . $request_origin);
+header("Access-Control-Allow-Credentials: true");
+header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
+header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With, " . $app_secret_header);
+
+if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
+    exit(0);
+}
+
+// --- API业务逻辑从这里开始 ---
+header('Content-Type: application/json; charset=UTF-8');
 
 // 扑克牌的定义
 $suits = ['spades', 'hearts', 'clubs', 'diamonds'];

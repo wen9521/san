@@ -64,7 +64,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 // --- API 业务逻辑：用户登录 ---
 
-
 // 9. 引入数据库连接（请确保 db_connect.php 已配置好 PDO 连接 $pdo）
 require_once __DIR__ . '/../db_connect.php';
 
@@ -92,11 +91,11 @@ try {
 
     // 13. 校验密码
     if ($user && password_verify($password, $user['password_hash'])) {
-        // 登录成功
+        // 登录成功（字段改为data）
         echo json_encode([
             'success' => true,
             'message' => '登录成功',
-            'user'    => [
+            'data'    => [
                 'id'       => $user['id'],
                 'username' => $user['username'],
                 'points'   => $user['points']

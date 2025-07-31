@@ -89,16 +89,12 @@ if ($username === '' || $password === '') {
     exit;
 }
 
-// 11. 密码强度校验 (已最终修复)
-if (strlen($password) < 6
-    || ! preg_match('/[A-Z]/', $password)
-    || ! preg_match('/[a-z]/', $password)
-    || ! preg_match('/\d/', $password)
-) {
+// 11. 密码强度校验 (已放宽)
+if (strlen($password) < 6) {
     http_response_code(422);
     echo json_encode([
         'success' => false,
-        'message' => '密码需至少6位，包含大小写字母和数字'
+        'message' => '密码长度不能少于6位'
     ], JSON_UNESCAPED_UNICODE);
     exit;
 }
@@ -125,11 +121,11 @@ try {
     $stmt->execute([$username, $password_hash, $initial_points]);
     $user_id = $pdo->lastInsertId();
 
-    // 15. 返回注册结果
+    // 15. 返回注册结果（字段改为data）
     echo json_encode([
         'success' => true,
         'message' => '注册成功',
-        'user'    => [
+        'data'    => [
             'id'       => (int) $user_id,
             'username' => $username,
             'points'   => $initial_points

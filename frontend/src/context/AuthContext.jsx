@@ -59,37 +59,38 @@ export function AuthProvider({ children }) {
   const openAuthDialog = () => setAuthDialogOpen(true);
   const openPointsDialog = () => setPointsDialogOpen(true);
 
-  const searchUserByPhone = async (phone) => {
-    try {
-        return await apiRequest('/points.php?action=search', {
-            method: 'POST',
-            body: JSON.stringify({ phone }) // 此处保留phone，因为搜索可能仍按手机号
-        });
-    } catch (error) {
-        return { success: false, message: error.message };
-    }
-  };
+  // --- 暂时禁用的积分管理功能 ---
+  // const searchUserByPhone = async (phone) => {
+  //   try {
+  //       return await apiRequest('/points.php?action=search', {
+  //           method: 'POST',
+  //           body: JSON.stringify({ phone }) // 此处保留phone，因为搜索可能仍按手机号
+  //       });
+  //   } catch (error) {
+  //       return { success: false, message: error.message };
+  //   }
+  // };
 
-  const transferPoints = async (toPhone, amount) => {
-    if (!user) return { success: false, message: '请先登录' };
-    try {
-        const res = await apiRequest('/points.php?action=transfer', {
-            method: 'POST',
-            body: JSON.stringify({ from: user.phone, to: toPhone, amount })
-        });
-        if (res && res.success) {
-            const updatedUser = { ...user, points: user.points - amount };
-            setUser(updatedUser);
-            localStorage.setItem('user', JSON.stringify(updatedUser));
-        }
-        return res;
-    } catch (error) {
-        return { success: false, message: error.message };
-    }
-  };
+  // const transferPoints = async (toPhone, amount) => {
+  //   if (!user) return { success: false, message: '请先登录' };
+  //   try {
+  //       const res = await apiRequest('/points.php?action=transfer', {
+  //           method: 'POST',
+  //           body: JSON.stringify({ from: user.phone, to: toPhone, amount })
+  //       });
+  //       if (res && res.success) {
+  //           const updatedUser = { ...user, points: user.points - amount };
+  //           setUser(updatedUser);
+  //           localStorage.setItem('user', JSON.stringify(updatedUser));
+  //       }
+  //       return res;
+  //   } catch (error) {
+  //       return { success: false, message: error.message };
+  //   }
+  // };
 
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, openAuthDialog, openPointsDialog, searchUserByPhone, transferPoints }}>
+    <AuthContext.Provider value={{ user, login, register, logout, openAuthDialog, openPointsDialog }}>
       {children}
       <AuthDialog open={isAuthDialogOpen} onClose={() => setAuthDialogOpen(false)} />
       <PointsDialog open={isPointsDialogOpen} onClose={() => setPointsDialogOpen(false)} />

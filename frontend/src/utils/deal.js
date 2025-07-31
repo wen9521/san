@@ -1,54 +1,54 @@
 /**
- * 【核心修正】: 创建并返回一副标准的52张扑克牌对象数组。
- * @returns {Array<Object>} 一副扑克牌，每张牌的格式为 { id, rank, suit }。
+ * 发牌和洗牌的核心逻辑
  */
-const createDeck = () => {
-    const suits = ['spades', 'hearts', 'clubs', 'diamonds'];
-    const ranks = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'jack', 'queen', 'king', 'ace'];
+
+// 定义牌的常量
+const SUITS = ['S', 'H', 'C', 'D']; // 黑桃, 红桃, 梅花, 方块
+const RANKS = ['2', '3', '4', '5', '6', '7', '8', '9', 'T', 'J', 'Q', 'K', 'A'];
+
+// 英文名称映射，用于生成牌的ID和图片路径
+const SUIT_NAMES = { S: 'spades', H: 'hearts', C: 'clubs', D: 'diamonds' };
+const RANK_NAMES = {
+    'A': 'ace', 'K': 'king', 'Q': 'queen', 'J': 'jack',
+    'T': '10', '9': '9', '8': '8', '7': '7', '6': '6',
+    '5': '5', '4': '4', '3': '3', '2': '2'
+};
+
+
+/**
+ * 创建并返回一副完整的、带有ID的扑克牌
+ * @returns {Array<Object>} 包含52张牌的数组，每张牌都是一个对象 e.g. { id: 'ace_of_spades', rank: 'A', suit: 'S' }
+ */
+function createDeck() {
     const deck = [];
-    for (const suit of suits) {
-        for (const rank of ranks) {
+    for (const suit of SUITS) {
+        for (const rank of RANKS) {
+            const rankName = RANK_NAMES[rank];
+            const suitName = SUIT_NAMES[suit];
             deck.push({
-                id: `${rank}_of_${suit}`,
-                rank: rank,
-                suit: suit
+                // 【已修复】增加了这个关键的id字段
+                id: `${rankName}_of_${suitName}`, 
+                rank,
+                suit
             });
         }
     }
     return deck;
-};
+}
+
 
 /**
- * 使用 Fisher-Yates (aka Knuth) 算法来洗牌。
- * @param {Array<Object>} deck - 需要被洗的牌组。
- * @returns {Array<Object>} 洗好的牌组。
+ * 洗牌并发给四位玩家，每人13张
+ * @returns {{player: Array, ai1: Array, ai2: Array, ai3: Array}}
  */
-const shuffleDeck = (deck) => {
-    let currentIndex = deck.length, randomIndex;
+export function dealAndShuffle() {
+    let deck = createDeck();
+    deck = deck.sort(() => Math.random() - 0.5); // 洗牌
 
-    while (currentIndex !== 0) {
-        randomIndex = Math.floor(Math.random() * currentIndex);
-        currentIndex--;
-
-        [deck[currentIndex], deck[randomIndex]] = [deck[randomIndex], deck[currentIndex]];
-    }
-
-    return deck;
-};
-
-/**
- * 创建、洗牌并发牌给四位玩家。
- * 现在返回的是对象数组。
- * @returns {{player: Array<Object>, ai1: Array<Object>, ai2: Array<Object>, ai3: Array<Object>}}
- */
-export const dealAndShuffle = () => {
-    const deck = createDeck();
-    const shuffledDeck = shuffleDeck(deck);
-
-    const player = shuffledDeck.slice(0, 13);
-    const ai1 = shuffledDeck.slice(13, 26);
-    const ai2 = shuffledDeck.slice(26, 39);
-    const ai3 = shuffledDeck.slice(39, 52);
-
-    return { player, ai1, ai2, ai3 };
-};
+    return {
+        player: deck.slice(0, 13),
+        ai1: deck.slice(13, 26),
+        ai2: deck.slice(26, 39),
+        ai3: deck.slice(39, 52),
+    };
+}

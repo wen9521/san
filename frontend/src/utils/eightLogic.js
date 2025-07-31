@@ -1,8 +1,8 @@
 /**
  * =================================================================================
- * 八张游戏核心逻辑 (8-Card Poker Logic) - V4 (Final Corrected)
+ * 八张游戏核心逻辑 (8-Card Poker Logic) - V5 (Final Corrected with AI & Sorting)
  * 
- * 遵循的规则 (已更正):
+ * 遵循的规则:
  * 1. 牌墩: 头道(2张), 中道(3张), 后道(3张)
  * 2. 牌型大小: 同花顺 > 三条 > 顺子 > 对子 > 散牌 (乌龙) - **没有同花**
  * 3. 顺子大小: AKQ > A23 > KQJ > ... > 432
@@ -36,6 +36,15 @@ const SPECIAL_HAND_TYPES = {
 // 2. 辅助函数 (Helper Functions)
 const getRankValue = (card) => RANKS.indexOf(card.rank);
 const getSuitValue = (card) => SUITS[card.suit.toUpperCase()];
+
+/**
+ * 根据牌的点数从大到小排序牌组
+ * @param {Array} cards - 牌对象数组
+ * @returns {Array} 排序后的牌组
+ */
+export const sortCardsByRank = (cards) => {
+    return [...cards].sort((a, b) => getRankValue(b) - getRankValue(a));
+};
 
 /**
  * 评估单个牌墩的牌力
@@ -213,4 +222,57 @@ export const checkForSpecialHand = (fullHand) => {
     // 这里暂时不实现，以保证核心逻辑的稳定。
     
     return null;
+};
+
+/**
+ * 辅助函数：生成数组的所有组合
+ * @param {Array} array - 输入数组
+ * @param {number} k - 组合的长度
+ * @returns {Array<Array>}
+ */
+const combinations = (array, k) => {
+    const result = [];
+    function f(prefix, arr, n) {
+        if (n === 0) {
+            result.push(prefix);
+            return;
+        }
+        for (let i = 0; i < arr.length; i++) {
+            f(prefix.concat(arr[i]), arr.slice(i + 1), n - 1);
+        }
+    }
+    f([], array, k);
+    return result;
+};
+
+/**
+ * 为AI玩家找到八张牌的最佳（或至少是合法）排列组合 (2-3-3)
+ * 尝试找到一个符合“后道 >= 中道 >= 头道”规则的有效排列。
+ * 注意：此函数目前找到的是第一个有效排列，而非数学上的“最佳”排列。
+ * 真正的“最佳”排列需要更复杂的评估函数和穷举比较所有有效排列。
+ * @param {Array} fullHand - 玩家的8张手牌
+ * @returns {{front: Array, middle: Array, back: Array}|null} 有效的牌墩排列或null
+ */
+export const getAIEightBestArrangement = (fullHand) => {
+    if (!fullHand || fullHand.length !== 8) return null;
+
+    const allFrontHands = combinations(fullHand, 2);
+
+    for (const currentFront of allFrontHands) {
+        const remaining6 = fullHand.filter(card => !currentFront.some(fc => fc.id === card.id));
+        const allMiddleHands = combinations(remaining6, 3);
+
+        for (const currentMiddle of allMiddleHands) {
+            const currentBack = remaining6.filter(card => !currentMiddle.some(mc => mc.id === card.id));
+            const currentArrangement = { front: currentFront, middle: currentMiddle, back: currentBack };
+
+            // 验证此排列是否符合八张牌的规则 (后道 >= 中道 >= 头道)
+            if (validateEightArrangement(currentArrangement).isValid) {
+                return currentArrangement; // 返回找到的第一个有效排列
+            }
+        }
+    }
+
+    console.warn("WARNING: No valid 8-card arrangement found for the hand.", fullHand);
+    return null; // 如果找不到任何有效排列
 };

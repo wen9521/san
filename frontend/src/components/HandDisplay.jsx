@@ -1,5 +1,5 @@
 import React from 'react';
-import PokerCard from './PokerCard';
+import { PokerCard } from './PokerCard';
 import '../styles/App.css';
 
 // hand 结构: [{ id: '...', displayName: '...' }, ...]

@@ -3,7 +3,7 @@ import { Box, Typography, Button, Paper, Grid } from '@mui/material';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import HandDisplay from '../components/HandDisplay';
-import GameRow from '../components/GameRow';
+import { GameRow } from '../components/GameRow'; // Corrected import
 import { useGame } from '../context/GameContext';
 import { validateEightArrangement, checkForSpecialHand } from '../utils/eightLogic';
 import SpecialHandDialog from '../components/SpecialHandDialog';

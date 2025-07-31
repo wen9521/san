@@ -10,8 +10,13 @@ $allowed_origins = [
     'https://gewe.dpdns.org',
     'capacitor://localhost',
     'http://localhost',
+    'https://localhost', // 新增支持安卓 webview
     'https://wen9521.github.io'
 ];
+
+// 日志: 记录真实 Origin（可选，便于排查跨域问题）
+file_put_contents('/tmp/origin.log', date('c') . " ORIGIN: " . ($_SERVER['HTTP_ORIGIN'] ?? '(none)') . " | UA: " . ($_SERVER['HTTP_USER_AGENT'] ?? '(no UA)') . "
+", FILE_APPEND);
 
 // 2. 获取并（可选）记录 Origin
 $request_origin = $_SERVER['HTTP_ORIGIN'] ?? '';

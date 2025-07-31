@@ -50,8 +50,8 @@ export const apiRequest = async (endpoint, options = {}) => {
             }
         }
         
-        // 成功时，如果响应文本为空，则返回null
-        if (!responseText) {
+        // 成功时，如果响应文本为空、仅空白或为"undefined"，则返回null
+        if (!responseText || responseText.trim() === "" || responseText === "undefined") {
             return null;
         }
 

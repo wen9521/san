@@ -9,7 +9,8 @@ $allowed_origins = [
     'https://9525.ip-ddns.com',
     'https://gewe.dpdns.org',
     'capacitor://localhost',
-    'http://localhost'
+    'http://localhost',
+    'https://wen9521.github.io'
 ];
 
 // 2. 获取并（可选）记录 Origin
@@ -21,6 +22,10 @@ if ($devMode) {
 // 3. 验证 Origin
 $is_allowed = in_array($request_origin, $allowed_origins, true);
 
+// 安卓/IOS等的
+if ($request_origin === 'null' || $request_origin === '') {
+    $is_allowed = true;
+}
 // 支持 file:// 前缀（旧版 WebView）
 if (! $is_allowed && strpos($request_origin, 'file://') === 0) {
     $is_allowed     = true;
@@ -52,7 +57,7 @@ header("Access-Control-Allow-Origin: {$request_origin}");
 header('Access-Control-Allow-Credentials: true');
 header('Access-Control-Allow-Methods: POST, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With, X-App-Secret');
-header('Access-Control-Max-Age: 86400');
+header('Access-control-max-age: 86400');
 
 // 7. 预检请求直接返回 200
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {

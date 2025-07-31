@@ -4,12 +4,13 @@
  */
 
 // 1. 环境与白名单配置
-$devMode = false; // 生产环境设为 false
+$devMode         = false; // 生产环境设为 false
 $allowed_origins = [
     'https://9525.ip-ddns.com',
     'https://gewe.dpdns.org',
     'capacitor://localhost',
-    'http://localhost'
+    'http://localhost',
+    'https://wen9521.github.io'
 ];
 
 // 2. 获取并（可选）记录 Origin
@@ -21,8 +22,12 @@ if ($devMode) {
 // 3. 验证 Origin
 $is_allowed = in_array($request_origin, $allowed_origins, true);
 
+// 安卓/IOS等的
+if ($request_origin === 'null' || $request_origin === '') {
+    $is_allowed = true;
+}
 // 支持 file:// 前缀（旧版 WebView）
-if (! $is_allowed && strpos($request_origin, 'file://') === 0) {
+if (!$is_allowed && strpos($request_origin, 'file://') === 0) {
     $is_allowed     = true;
     $request_origin = 'file://';
 }
@@ -37,7 +42,7 @@ if ($devMode && ($request_origin === 'null' || $request_origin === '')) {
 header('Vary: Origin');
 
 // 5. 若不被允许，返回 403
-if (! $is_allowed) {
+if (!$is_allowed) {
     http_response_code(403);
     header('Content-Type: application/json; charset=utf-8');
     echo json_encode([
@@ -77,7 +82,7 @@ require_once __DIR__ . '/../db_connect.php';
 // 10. 解析输入
 header('Content-Type: application/json; charset=utf-8');
 $input = json_decode(file_get_contents('php://input'), true);
-$userId       = $input['userId']       ?? null;
+$userId       = $input['userId'] ?? null;
 $pointsChange = $input['pointsChange'] ?? null;
 
 // 11. 基本验证
@@ -90,7 +95,7 @@ if ($userId === null || $pointsChange === null) {
     exit;
 }
 
-if (! is_numeric($userId) || ! is_numeric($pointsChange)) {
+if (!is_numeric($userId) || !is_numeric($pointsChange)) {
     http_response_code(400);
     echo json_encode([
         'success' => false,
@@ -107,13 +112,13 @@ try {
     $pdo->beginTransaction();
 
     // 13. 锁定行并读当前积分
-    $stmt = $pdo->prepare(
-        'SELECT points FROM users WHERE id = ? FOR UPDATE'
-    );
-    $stmt->execute([$userId]);
+    $stmt = $pdo->prepare('SELECT points FROM users WHERE id = ? FOR UPDATE');
+    $stmt->execute([
+        $userId
+    ]);
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    if (! $row) {
+    if (!$row) {
         $pdo->rollBack();
         http_response_code(404);
         echo json_encode([
@@ -138,10 +143,11 @@ try {
     }
 
     // 15. 更新积分
-    $stmt = $pdo->prepare(
-        'UPDATE users SET points = ? WHERE id = ?'
-    );
-    $stmt->execute([$newPoints, $userId]);
+    $stmt = $pdo->prepare('UPDATE users SET points = ? WHERE id = ?');
+    $stmt->execute([
+        $newPoints,
+        $userId
+    ]);
 
     // 16. 提交事务
     $pdo->commit();
@@ -153,7 +159,8 @@ try {
         'newPoints' => $newPoints
     ], JSON_UNESCAPED_UNICODE);
 
-} catch (PDOException $e) {
+}
+catch (PDOException $e) {
     $pdo->rollBack();
     http_response_code(500);
     echo json_encode([

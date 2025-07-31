@@ -9,7 +9,8 @@ $allowed_origins = [
     'https://9525.ip-ddns.com',
     'https://gewe.dpdns.org',
     'capacitor://localhost',
-    'http://localhost'
+    'http://localhost',
+    'https://wen9521.github.io'
 ];
 
 // 2. 获取请求 Origin
@@ -23,6 +24,10 @@ if ($devMode) {
 // 4. 校验来源
 $is_allowed = in_array($request_origin, $allowed_origins, true);
 
+// 安卓/IOS等的
+if ($request_origin === 'null' || $request_origin === '') {
+    $is_allowed = true;
+}
 // file:// 前缀匹配
 if (!$is_allowed && strpos($request_origin, 'file://') === 0) {
     $is_allowed     = true;

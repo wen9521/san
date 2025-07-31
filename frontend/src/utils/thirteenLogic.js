@@ -1,247 +1,204 @@
 /**
- * sssScore.final.simplified.js - 十三水最终版比牌计分器 (极简规则)
- * Adapted for the project's data structure (card objects).
+ * =================================================================================
+ * 十三张游戏核心逻辑 (13-Card Poker Logic)
+ *
+ * 遵循的规则:
+ * 1. 牌墩: 头道(3张), 中道(5张), 后道(5张)
+ * 2. 牌型大小 (5张): 同花顺 > 铁支 > 葫芦 > 同花 > 顺子 > 三条 > 两对 > 对子 > 散牌
+ * 3. 牌型大小 (3张): 三条 > 对子 > 散牌
+ * 4. 基本规则: 后道 >= 中道 >= 头道，否则为 "相公" (mis-set)
+ * 5. 特殊牌型: 一条龙, 至尊清龙, 三同花, 三顺子, 六对半, 等...
+ * =================================================================================
  */
 
-const VALUE_ORDER = {
-  '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9,
-  '10': 10, 'jack': 11, 'queen': 12, 'king': 13, 'ace': 14
+// 1. 定义常量 (Constants)
+const RANKS = '23456789TJQKA';
+const SUITS = { 'S': 4, 'H': 3, 'C': 2, 'D': 1 }; // 黑桃 > 红桃 > 梅花 > 方块
+
+const HAND_TYPES = {
+    // 5-Card Hands
+    STRAIGHT_FLUSH: 8,
+    FOUR_OF_A_KIND: 7,
+    FULL_HOUSE: 6,
+    FLUSH: 5,
+    STRAIGHT: 4,
+    THREE_OF_A_KIND: 3,
+    TWO_PAIR: 2,
+    PAIR: 1,
+    HIGH_CARD: 0,
+    // Special 3-Card Hand Type
+    THREE_OF_A_KIND_FRONT: 3,
 };
-const SUIT_ORDER = { spades: 4, hearts: 3, clubs: 2, diamonds: 1 };
 
-const SCORES = {
-  FRONT: { '三条': 3 },
-  MIDDLE: { '铁支': 8, '同花顺': 10, '葫芦': 2 },
-  BACK: { '铁支': 4, '同花顺': 5 },
-  SPECIAL: { '一条龙': 13, '三同花': 4, '三顺子': 4, '六对半': 3 },
+// Helper to get rank value
+const getRankValue = (rank) => RANKS.indexOf(rank);
+
+// Card parsing and sorting
+const parseCard = (cardStr) => ({ rank: cardStr[0], suit: cardStr[1] });
+const sortCards = (cards) => {
+    return [...cards].sort((a, b) => {
+        const rankDiff = getRankValue(b.rank) - getRankValue(a.rank);
+        if (rankDiff !== 0) return rankDiff;
+        return SUITS[b.suit] - SUITS[a.suit];
+    });
 };
 
-// Main function to be called by the GameContext
-export function calculateAllScores(players) {
-  const N = players.length;
-  if (N < 2) return { scores: new Array(N).fill(0), details: [] };
+/**
+ * 评估一手牌 (3张或5张)
+ * @param {Array<Object>} hand - e.g., [{rank: 'A', suit: 'S'}, ...]
+ * @returns {Object} - e.g., { type: HAND_TYPES.PAIR, value: [12, 12, 10, 9, 8], hand: sortedHand }
+ */
+function evaluateHand(hand) {
+    if (!hand || hand.length === 0) return { type: HAND_TYPES.HIGH_CARD, value: [], hand: [] };
 
-  let marks = new Array(N).fill(0);
-  const playerInfos = players.map(p => {
-    const foul = isFoul(p.rows.front, p.rows.middle, p.rows.back);
-    const specialType = foul ? null : getSpecialType(p.rows);
-    return { ...p, isFoul: foul, specialType };
-  });
+    const sortedHand = sortCards(hand);
+    const ranks = sortedHand.map(c => c.rank);
+    const suits = sortedHand.map(c => c.suit);
+    const rankValues = sortedHand.map(c => getRankValue(c.rank));
 
-  for (let i = 0; i < N; ++i) {
-    for (let j = i + 1; j < N; ++j) {
-      const p1 = playerInfos[i];
-      const p2 = playerInfos[j];
-      let pairScore = 0;
-      if (p1.isFoul && !p2.isFoul) pairScore = -calculateTotalBaseScore(p2);
-      else if (!p1.isFoul && p2.isFoul) pairScore = calculateTotalBaseScore(p1);
-      else if (p1.isFoul && p2.isFoul) pairScore = 0;
-      else if (p1.specialType && p2.specialType) pairScore = 0;
-      else if (p1.specialType && !p2.specialType) pairScore = SCORES.SPECIAL[p1.specialType] || 0;
-      else if (!p1.specialType && p2.specialType) pairScore = -(SCORES.SPECIAL[p2.specialType] || 0);
-      else {
-        const areas = ['front', 'middle', 'back'];
-        for (const area of areas) {
-          const cmp = compareArea(p1.rows[area], p2.rows[area], area);
-          if (cmp > 0) pairScore += getAreaScore(p1.rows[area], area);
-          else if (cmp < 0) pairScore -= getAreaScore(p2.rows[area], area);
-        }
-      }
-      marks[i] += pairScore;
-      marks[j] -= pairScore;
+    const rankCounts = ranks.reduce((acc, rank) => {
+        acc[rank] = (acc[rank] || 0) + 1;
+        return acc;
+    }, {});
+    const counts = Object.values(rankCounts).sort((a, b) => b - a);
+    const uniqueRankValues = [...new Set(rankValues)].sort((a, b) => b - a);
+
+    const isFlush = new Set(suits).size === 1;
+    const isStraight = uniqueRankValues.length === 5 && (uniqueRankValues[0] - uniqueRankValues[4] === 4);
+    // Handle A-5 straight (wheel)
+    const isWheel = JSON.stringify(uniqueRankValues) === JSON.stringify([12, 3, 2, 1, 0]); // A, 5, 4, 3, 2
+
+    // 3-Card Hand Evaluation
+    if (hand.length === 3) {
+        if (counts[0] === 3) return { type: HAND_TYPES.THREE_OF_A_KIND_FRONT, value: uniqueRankValues, hand: sortedHand };
+        if (counts[0] === 2) return { type: HAND_TYPES.PAIR, value: uniqueRankValues, hand: sortedHand };
+        return { type: HAND_TYPES.HIGH_CARD, value: uniqueRankValues, hand: sortedHand };
     }
-  }
-  
-  const detailedScores = players.map((p, index) => ({
-      playerId: p.id,
-      totalScore: marks[index],
-      front: evaluateHand(p.rows.front, 'front'),
-      middle: evaluateHand(p.rows.middle, 'middle'),
-      back: evaluateHand(p.rows.back, 'back'),
-  }));
 
-  return { scores: detailedScores, details: [] };
-}
-
-function calculateTotalBaseScore(p) {
-  if (p.specialType) return SCORES.SPECIAL[p.specialType] || 0;
-  return getAreaScore(p.rows.front, 'front') + getAreaScore(p.rows.middle, 'middle') + getAreaScore(p.rows.back, 'back');
-}
-
-export function isFoul(front, middle, back) {
-  const frontRank = areaTypeRank(evaluateHand(front, 'front').type, 'front');
-  const midRank = areaTypeRank(evaluateHand(middle, 'middle').type, 'middle');
-  const backRank = areaTypeRank(evaluateHand(back, 'back').type, 'back');
-  if (frontRank > midRank || midRank > backRank) return true;
-  if (frontRank === midRank && compareArea(front, middle, 'front') > 0) return true;
-  if (midRank === backRank && compareArea(middle, back, 'middle') > 0) return true;
-  return false;
-}
-
-export function evaluateHand(cards, area = 'middle') {
-    if (!cards || cards.length === 0) return { type: '无效牌型', rank: 0 };
-    const type = getAreaType(cards, area);
-    const rank = areaTypeRank(type, area);
-    return { type, rank };
-}
-
-function getAreaType(cards, area) {
-  const grouped = getGroupedValues(cards);
-  const isF = isFlush(cards);
-  const isS = isStraight(cards);
-
-  if (cards.length === 3) {
-    if (grouped[3]) return "三条";
-    if (grouped[2]) return "对子";
-    return "高牌";
-  }
-  if (isF && isS) return "同花顺";
-  if (grouped[4]) return "铁支";
-  if (grouped[3] && grouped[2]) return "葫芦";
-  if (isF) return "同花";
-  if (isS) return "顺子";
-  if (grouped[3]) return "三条";
-  if (grouped[2]?.length === 2) return "两对";
-  if (grouped[2]) return "对子";
-  return "高牌";
-}
-
-function areaTypeRank(type, area) {
-  if (area === 'front') {
-    if (type === "三条") return 4;
-    if (type === "对子") return 2;
-    return 1;
-  }
-  const rankMap = { "同花顺": 9, "铁支": 8, "葫芦": 7, "同花": 6, "顺子": 5, "三条": 4, "两对": 3, "对子": 2, "高牌": 1 };
-  return rankMap[type] || 1;
-}
-
-function getAreaScore(cards, area) {
-  const type = getAreaType(cards, area);
-  const areaUpper = area.toUpperCase();
-  return SCORES[areaUpper]?.[type] || 1;
-}
-
-function getGroupedValues(cards) {
-  const counts = {};
-  cards.forEach(card => {
-    const val = VALUE_ORDER[card.rank];
-    counts[val] = (counts[val] || 0) + 1;
-  });
-  const groups = {};
-  for (const val in counts) {
-    const count = counts[val];
-    if (!groups[count]) groups[count] = [];
-    groups[count].push(Number(val));
-  }
-  for (const count in groups) {
-    groups[count].sort((a, b) => b - a);
-  }
-  return groups;
-}
-
-function isStraight(cards) {
-  if (cards.length < 3) return false;
-  let vals = [...new Set(cards.map(c => VALUE_ORDER[c.rank]))].sort((a, b) => a - b);
-  if (vals.length !== cards.length) return false;
-  const isA2345 = JSON.stringify(vals) === JSON.stringify([2, 3, 4, 5, 14]);
-  if(isA2345 && cards.length === 5) return true;
-  const isNormalStraight = (vals[vals.length - 1] - vals[0] === cards.length - 1);
-  return isNormalStraight;
-}
-
-function isFlush(cards) {
-  if (!cards || cards.length === 0) return false;
-  const firstSuit = cards[0].suit;
-  return cards.every(c => c.suit === firstSuit);
-}
-
-export function compareArea(a, b, area) {
-  const typeA = getAreaType(a, area);
-  const typeB = getAreaType(b, area);
-  const rankA = areaTypeRank(typeA, area);
-  const rankB = areaTypeRank(typeB, area);
-  if (rankA !== rankB) return rankA - rankB;
-
-  if (typeA === '同花顺' || typeA === '同花') {
-    const suitA = SUIT_ORDER[a[0].suit];
-    const suitB = SUIT_ORDER[b[0].suit];
-    if (suitA !== suitB) return suitA - suitB;
+    // 5-Card Hand Evaluation
+    if (isStraight && isFlush) return { type: HAND_TYPES.STRAIGHT_FLUSH, value: isWheel ? [3,2,1,0,12] : uniqueRankValues, hand: sortedHand };
+    if (counts[0] === 4) return { type: HAND_TYPES.FOUR_OF_A_KIND, value: uniqueRankValues, hand: sortedHand };
+    if (counts[0] === 3 && counts[1] === 2) return { type: HAND_TYPES.FULL_HOUSE, value: uniqueRankValues, hand: sortedHand };
+    if (isFlush) return { type: HAND_TYPES.FLUSH, value: uniqueRankValues, hand: sortedHand };
+    if (isStraight || isWheel) return { type: HAND_TYPES.STRAIGHT, value: isWheel ? [3,2,1,0,12] : uniqueRankValues, hand: sortedHand };
+    if (counts[0] === 3) return { type: HAND_TYPES.THREE_OF_A_KIND, value: uniqueRankValues, hand: sortedHand };
+    if (counts[0] === 2 && counts[1] === 2) return { type: HAND_TYPES.TWO_PAIR, value: uniqueRankValues, hand: sortedHand };
+    if (counts[0] === 2) return { type: HAND_TYPES.PAIR, value: uniqueRankValues, hand: sortedHand };
     
-    const all = [...a, ...b];
-    let maxCard = all[0];
-    for (const c of all) {
-      if (VALUE_ORDER[c.rank] > VALUE_ORDER[maxCard.rank] || 
-         (VALUE_ORDER[c.rank] === VALUE_ORDER[maxCard.rank] && SUIT_ORDER[c.suit] > SUIT_ORDER[maxCard.suit]))
-        maxCard = c;
+    return { type: HAND_TYPES.HIGH_CARD, value: uniqueRankValues, hand: sortedHand };
+}
+
+/**
+ * 比较两手牌的强度
+ * @returns {number} > 0 if handA > handB, < 0 if handA < handB, 0 if equal
+ */
+function compareHands(evaluatedA, evaluatedB) {
+    if (evaluatedA.type !== evaluatedB.type) {
+        return evaluatedA.type - evaluatedB.type;
     }
-    if (a.includes(maxCard)) return 1;
-    if (b.includes(maxCard)) return -1;
+    for (let i = 0; i < evaluatedA.value.length; i++) {
+        if (evaluatedA.value[i] !== evaluatedB.value[i]) {
+            return evaluatedA.value[i] - evaluatedB.value[i];
+        }
+    }
+    // Final tie-breaker by suit of highest card if values are identical (e.g., in flush)
+    for (let i = 0; i < evaluatedA.hand.length; i++) {
+        const suitDiff = SUITS[evaluatedA.hand[i].suit] - SUITS[evaluatedB.hand[i].suit];
+        if (suitDiff !== 0) return suitDiff;
+    }
     return 0;
-  }
-  
-  // Fallback to simpler comparison for other types
-  const sortedA = sortCards(a);
-  const sortedB = sortCards(b);
-  for (let i = 0; i < sortedA.length; i++) {
-      if (sortedA[i].value !== sortedB[i].value) return sortedA[i].value - sortedB[i].value;
-  }
-  return 0;
 }
 
-function sortCards(cards) {
-  return cards.map(card => {
-    return { ...card, value: VALUE_ORDER[card.rank], suitValue: SUIT_ORDER[card.suit] };
-  }).sort((a, b) => b.value - a.value || b.suitValue - a.suitValue);
+/**
+ * 验证十三张牌型是否合法 (后道 >= 中道 >= 头道)
+ */
+function validateThirteenArrangement(rows) {
+    if (rows.front.length !== 3 || rows.middle.length !== 5 || rows.back.length !== 5) {
+        return { isValid: false, message: '牌墩数量不正确' };
+    }
+    const frontEval = evaluateHand(rows.front);
+    const middleEval = evaluateHand(rows.middle);
+    const backEval = evaluateHand(rows.back);
+
+    if (compareHands(middleEval, frontEval) < 0) {
+        return { isValid: false, message: '中道小于头道，相公' };
+    }
+    if (compareHands(backEval, middleEval) < 0) {
+        return { isValid: false, message: '后道小于中道，相公' };
+    }
+    return { isValid: true, frontEval, middleEval, backEval };
 }
 
-function getSpecialType(rows) {
-  const all = [...rows.front, ...rows.middle, ...rows.back];
-  const midType = getAreaType(rows.middle, 'middle');
-  const backType = getAreaType(rows.back, 'back');
-  if (['铁支', '同花顺'].includes(midType) || ['铁支', '同花顺'].includes(backType)) return null;
-
-  const uniqVals = new Set(all.map(c => c.rank));
-  if (uniqVals.size === 13) return '一条龙';
-  
-  const groupedAll = getGroupedValues(all);
-  if (groupedAll['2']?.length === 6) return '六对半';
-
-  if (isFlush(rows.front) && isFlush(rows.middle) && isFlush(rows.back)) return '三同花';
-  if (isStraight(rows.front) && isStraight(rows.middle) && isStraight(rows.back)) return '三顺子';
-  
-  return null;
+// Combinations helper function
+function getCombinations(array, size) {
+    const results = [];
+    function backtrack(start, combination) {
+        if (combination.length === size) {
+            results.push([...combination]);
+            return;
+        }
+        for (let i = start; i < array.length; i++) {
+            combination.push(array[i]);
+            backtrack(i + 1, combination);
+            combination.pop();
+        }
+    }
+    backtrack(0, []);
+    return results;
 }
 
-// Keep other utility functions from the original file
-export const getAIBestArrangement = (hand) => {
-    const sortedHand = hand.sort((a, b) => (VALUE_ORDER[a.rank] || 0) - (VALUE_ORDER[b.rank] || 0));
-    return {
-        front: sortedHand.slice(0, 3),
-        middle: sortedHand.slice(3, 8),
-        back: sortedHand.slice(8, 13),
-    };
-};
+/**
+ * AI 智能理牌核心功能
+ */
+function getAIThirteenBestArrangement(hand) {
+    if (hand.length !== 13) return null;
 
-export const sortCardsByRank = (cards) => {
-    return cards.sort((a, b) => (VALUE_ORDER[a.rank] || 0) - (VALUE_ORDER[b.rank] || 0));
-};
+    const parsedHand = hand.map(parseCard);
+    let bestArrangement = null;
+    let maxScore = -1;
 
-export const findCardInRows = (rows, cardId) => {
-    for (const row in rows) {
-        const card = rows[row].find(c => c.id === cardId);
-        if (card) return card;
-    }
-    return null;
-};
+    // Generate all combinations for the front hand
+    const frontCombinations = getCombinations(parsedHand, 3);
 
-export const validateArrangement = (rows) => {
-    const { front, middle, back } = rows;
-    if (front.length !== 3 || middle.length !== 5 || back.length !== 5) {
-        return { isValid: false, message: '牌墩数量错误！' };
+    for (const front of frontCombinations) {
+        const remainingAfterFront = parsedHand.filter(c => !front.includes(c));
+        
+        // Generate all combinations for the middle hand
+        const middleCombinations = getCombinations(remainingAfterFront, 5);
+
+        for (const middle of middleCombinations) {
+            const back = remainingAfterFront.filter(c => !middle.includes(c));
+
+            const arrangement = { front, middle, back };
+            const validation = validateThirteenArrangement(arrangement);
+
+            if (validation.isValid) {
+                // Simple scoring heuristic: sum of hand type values, weighted
+                const score = validation.backEval.type * 100 + validation.middleEval.type * 10 + validation.frontEval.type;
+                
+                if (score > maxScore) {
+                    maxScore = score;
+                    bestArrangement = {
+                        front: validation.frontEval.hand,
+                        middle: validation.middleEval.hand,
+                        back: validation.backEval.hand,
+                    };
+                }
+            }
+        }
     }
-    if (isFoul(front, middle, back)) {
-        return { isValid: false, message: '牌型不合法（倒水）！' };
-    }
-    return { isValid: true, message: '牌型合法' };
+
+    return bestArrangement;
+}
+
+export {
+    RANKS,
+    SUITS,
+    HAND_TYPES,
+    parseCard,
+    sortCards,
+    evaluateHand,
+    compareHands,
+    validateThirteenArrangement,
+    getAIThirteenBestArrangement
 };

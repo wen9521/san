@@ -1,24 +1,14 @@
 /**
  * =================================================================================
- * 八张游戏核心逻辑 (8-Card Poker Logic) - V5 (Final Corrected with AI & Sorting)
- * 
- * 遵循的规则:
- * 1. 牌墩: 头道(2张), 中道(3张), 后道(3张)
- * 2. 牌型大小: 同花顺 > 三条 > 顺子 > 对子 > 散牌 (乌龙) - **没有同花**
- * 3. 顺子大小: AKQ > A23 > KQJ > ... > 432
- * 4. 比牌: 先比牌型 -> 再比点数 -> 最后比最大牌花色
- * 5. 计分:
- *    - 头道: 对A(14水)...对2(2水), 散牌(1水)
- *    - 中/后道: 同花顺(10水), 三条(6水), 顺子(4水), 散牌(1水)
- * 6. 特殊牌型: 三同花顺(38水), 三顺子(8水), 四对(8水), **四条(8水)**
+ * 八张游戏核心逻辑 (8-Card Poker Logic) - V6 (Prefixed for Uniqueness)
  * =================================================================================
  */
 
-// 1. 定义常量 (Constants)
-const RANKS = ['2', '3', '4', '5', '6', '7', '8', '9', 'T', 'J', 'Q', 'K', 'A'];
-const SUITS = { 'S': 4, 'H': 3, 'C': 2, 'D': 1 }; // 黑 > 红 > 梅 > 方
+// 1. 定义常量 (Constants) - 【已修改】
+export const EIGHT_GAME_RANKS = ['2', '3', '4', '5', '6', '7', '8', '9', 'T', 'J', 'Q', 'K', 'A'];
+export const EIGHT_GAME_SUITS = { 'S': 4, 'H': 3, 'C': 2, 'D': 1 };
 
-const HAND_TYPES = {
+export const EIGHT_GAME_HAND_TYPES = {
     STRAIGHT_FLUSH: 4,
     THREE_OF_A_KIND: 3,
     STRAIGHT: 2,
@@ -26,7 +16,7 @@ const HAND_TYPES = {
     HIGH_CARD: 0,
 };
 
-const SPECIAL_HAND_TYPES = {
+export const EIGHT_GAME_SPECIAL_HAND_TYPES = {
     FOUR_OF_A_KIND: { score: 8, name: '四条' },
     THREE_STRAIGHT_FLUSHES: { score: 38, name: '三同花顺' },
     THREE_STRAIGHTS: { score: 8, name: '三顺子' },
@@ -34,26 +24,22 @@ const SPECIAL_HAND_TYPES = {
 };
 
 // 2. 辅助函数 (Helper Functions)
-const getRankValue = (card) => RANKS.indexOf(card.rank);
-const getSuitValue = (card) => SUITS[card.suit.toUpperCase()];
+const getRankValue = (card) => EIGHT_GAME_RANKS.indexOf(card.rank);
+const getSuitValue = (card) => EIGHT_GAME_SUITS[card.suit.toUpperCase()];
 
 /**
- * 根据牌的点数从大到小排序牌组
- * @param {Array} cards - 牌对象数组
- * @returns {Array} 排序后的牌组
+ * 【已修改】排序牌组
  */
-export const sortCardsByRank = (cards) => {
+export const sortEightGameCardsByRank = (cards) => {
     return [...cards].sort((a, b) => getRankValue(b) - getRankValue(a));
 };
 
 /**
- * 评估单个牌墩的牌力
- * @param {Array} hand - 牌墩中的牌
- * @returns {object} 包含牌型、点数、花色等信息的评估对象
+ * 【已修改】评估单个牌墩
  */
-export const evaluateEightHand = (hand) => {
+export const evaluateEightGameHand = (hand) => {
     if (!hand || hand.length === 0) {
-        return { type: HAND_TYPES.HIGH_CARD, highCards: [], ranks: [], hand: [] };
+        return { type: EIGHT_GAME_HAND_TYPES.HIGH_CARD, highCards: [], ranks: [], hand: [] };
     }
 
     const sortedHand = [...hand].sort((a, b) => getRankValue(b) - getRankValue(a));
@@ -62,217 +48,122 @@ export const evaluateEightHand = (hand) => {
     let highCards = ranks;
     const maxSuit = getSuitValue(sortedHand[0]);
 
-    const rankCounts = ranks.reduce((acc, rank) => {
-        acc[rank] = (acc[rank] || 0) + 1;
-        return acc;
-    }, {});
+    const rankCounts = ranks.reduce((acc, rank) => { acc[rank] = (acc[rank] || 0) + 1; return acc; }, {});
     const counts = Object.values(rankCounts).sort((a, b) => b - a);
 
     const isFlush = new Set(suits).size === 1;
-    
-    // A-2-3 顺子 (滚轮)
-    const isWheel = JSON.stringify(ranks) === JSON.stringify([RANKS.indexOf('A'), RANKS.indexOf('3'), RANKS.indexOf('2')]);
-    // 普通顺子
+    const isWheel = JSON.stringify(ranks) === JSON.stringify([EIGHT_GAME_RANKS.indexOf('A'), EIGHT_GAME_RANKS.indexOf('3'), EIGHT_GAME_RANKS.indexOf('2')]);
     const isNormalStraight = new Set(ranks).size === ranks.length && ranks[0] - ranks[ranks.length - 1] === ranks.length - 1;
     const isStraight = isNormalStraight || isWheel;
 
-    // 调整A23顺子的比较大小，让A作为最小牌
-    if (isWheel) {
-        highCards = [RANKS.indexOf('3'), RANKS.indexOf('2'), RANKS.indexOf('A')];
-    }
+    if (isWheel) highCards = [EIGHT_GAME_RANKS.indexOf('3'), EIGHT_GAME_RANKS.indexOf('2'), EIGHT_GAME_RANKS.indexOf('A')];
     
-    if (isStraight && isFlush) return { type: HAND_TYPES.STRAIGHT_FLUSH, highCards, hand, maxSuit };
-    if (counts[0] === 3) return { type: HAND_TYPES.THREE_OF_A_KIND, highCards, hand, maxSuit };
-    if (isStraight) return { type: HAND_TYPES.STRAIGHT, highCards, hand, maxSuit };
-    if (counts[0] === 2) return { type: HAND_TYPES.PAIR, highCards, hand, maxSuit };
+    if (isStraight && isFlush) return { type: EIGHT_GAME_HAND_TYPES.STRAIGHT_FLUSH, highCards, hand, maxSuit };
+    if (counts[0] === 3) return { type: EIGHT_GAME_HAND_TYPES.THREE_OF_A_KIND, highCards, hand, maxSuit };
+    if (isStraight) return { type: EIGHT_GAME_HAND_TYPES.STRAIGHT, highCards, hand, maxSuit };
+    if (counts[0] === 2) return { type: EIGHT_GAME_HAND_TYPES.PAIR, highCards, hand, maxSuit };
     
-    return { type: HAND_TYPES.HIGH_CARD, highCards, hand, maxSuit };
+    return { type: EIGHT_GAME_HAND_TYPES.HIGH_CARD, highCards, hand, maxSuit };
 };
 
 
 /**
- * 比较两个已评估牌墩的优劣
- * @param {object} handA - 玩家A的评估对象
- * @param {object} handB - 玩家B的评估对象
- * @returns {number} > 0 if A > B, < 0 if A < B, 0 if equal
+ * 【已修改】比较两个牌墩
  */
-export const compareHands = (handA, handB) => {
-    if (handA.type !== handB.type) {
-        return handA.type - handB.type;
-    }
+export const compareEightGameHands = (handA, handB) => {
+    if (handA.type !== handB.type) return handA.type - handB.type;
     for (let i = 0; i < handA.highCards.length; i++) {
-        if (handA.highCards[i] !== handB.highCards[i]) {
-            return handA.highCards[i] - handB.highCards[i];
-        }
+        if (handA.highCards[i] !== handB.highCards[i]) return handA.highCards[i] - handB.highCards[i];
     }
     return handA.maxSuit - handB.maxSuit;
 };
 
 /**
- * 验证八张牌的牌型是否合法 (2-3-3 且 后道 > 中道 > 头道)
- * @param {object} rows - 包含 front, middle, back 三个牌墩的对象
- * @returns {{isValid: boolean, message: string}} 验证结果
+ * 【已修改】验证牌型是否合法
  */
-export const validateEightArrangement = (rows) => {
+export const validateEightGameArrangement = (rows) => {
     const { front, middle, back } = rows;
-
     if (!front || !middle || !back || front.length !== 2 || middle.length !== 3 || back.length !== 3) {
         return { isValid: false, message: `牌墩数量错误！请确保为 头道:2, 中道:3, 后道:3。` };
     }
-
-    const frontHand = evaluateEightHand(front);
-    const middleHand = evaluateEightHand(middle);
-    const backHand = evaluateEightHand(back);
-
-    if (compareHands(frontHand, middleHand) > 0) {
-        return { isValid: false, message: '头道牌型大于中道，不符合规则！' };
-    }
-    if (compareHands(middleHand, backHand) > 0) {
-        return { isValid: false, message: '中道牌型大于后道，不符合规则！' };
-    }
-
+    const frontHand = evaluateEightGameHand(front);
+    const middleHand = evaluateEightGameHand(middle);
+    const backHand = evaluateEightGameHand(back);
+    if (compareEightGameHands(frontHand, middleHand) > 0) return { isValid: false, message: '头道牌型大于中道，不符合规则！' };
+    if (compareEightGameHands(middleHand, backHand) > 0) return { isValid: false, message: '中道牌型大于后道，不符合规则！' };
     return { isValid: true, message: '牌型有效' };
 };
 
-/**
- * 计算单个获胜牌墩的水数
- * @param {object} winningHand - 获胜牌墩的评估对象
- * @param {string} area - 'front', 'middle', or 'back'
- * @returns {number} 水数
- */
 const getHandScore = (winningHand, area) => {
-    if (area === 'front') { // 头道计分
-        if (winningHand.type === HAND_TYPES.PAIR) {
-            return winningHand.highCards[0] + 2; // 对A=14, 对K=13 ... 对2=2
-        }
-        return 1; // 散牌
-    } else { // 中道/后道计分
-        switch (winningHand.type) {
-            case HAND_TYPES.STRAIGHT_FLUSH: return 10;
-            case HAND_TYPES.THREE_OF_A_KIND: return 6;
-            case HAND_TYPES.STRAIGHT: return 4;
-            default: return 1; // 对子和散牌在这里都算1水
-        }
+    if (area === 'front') {
+        return winningHand.type === EIGHT_GAME_HAND_TYPES.PAIR ? winningHand.highCards[0] + 2 : 1;
+    }
+    switch (winningHand.type) {
+        case EIGHT_GAME_HAND_TYPES.STRAIGHT_FLUSH: return 10;
+        case EIGHT_GAME_HAND_TYPES.THREE_OF_A_KIND: return 6;
+        case EIGHT_GAME_HAND_TYPES.STRAIGHT: return 4;
+        default: return 1;
     }
 };
 
 /**
- * 计算两个玩家比牌后的总分
- * @param {object} playerARows - 玩家A的三墩
- * @param {object} playerBRows - 玩家B的三墩
- * @returns {{playerAScore: number, playerBScore: number, details: Array}}
+ * 【已修改】计算总分
  */
-export const calculateTotalScore = (playerARows, playerBRows) => {
+export const calculateEightGameTotalScore = (playerARows, playerBRows) => {
     const areas = ['front', 'middle', 'back'];
     let playerAScore = 0;
     const details = [];
-
     for (const area of areas) {
-        const handA = evaluateEightHand(playerARows[area]);
-        const handB = evaluateEightHand(playerBRows[area]);
-        const comparison = compareHands(handA, handB);
-
-        let areaScore = 0;
-        if (comparison > 0) {
-            areaScore = getHandScore(handA, area);
-            playerAScore += areaScore;
-        } else if (comparison < 0) {
-            areaScore = getHandScore(handB, area);
-            playerAScore -= areaScore;
-        }
+        const handA = evaluateEightGameHand(playerARows[area]);
+        const handB = evaluateEightGameHand(playerBRows[area]);
+        const comparison = compareEightGameHands(handA, handB);
+        let areaScore = comparison !== 0 ? getHandScore(comparison > 0 ? handA : handB, area) : 0;
+        playerAScore += comparison > 0 ? areaScore : -areaScore;
         details.push({ area, winner: comparison > 0 ? 'A' : (comparison < 0 ? 'B' : 'Tie'), score: areaScore, handA, handB });
     }
-    
     const aWins = details.filter(d => d.winner === 'A').length;
-    if (aWins === 3) {
-        playerAScore *= 2; // A打枪
-    } else if (aWins === 0 && details.filter(d => d.winner === 'B').length === 3) {
-        playerAScore *= 2; // B打枪
+    if (aWins === 3 || (aWins === 0 && details.filter(d => d.winner === 'B').length === 3)) {
+        playerAScore *= 2;
     }
-
     return { playerAScore, playerBScore: -playerAScore, details };
 };
 
 /**
- * 检查8张手牌是否构成特殊牌型
- * @param {Array} fullHand - 玩家的8张手牌
- * @returns {object|null} 特殊牌型对象或null
+ * 【已修改】检查特殊牌型
  */
-export const checkForSpecialHand = (fullHand) => {
+export const checkForEightGameSpecialHand = (fullHand) => {
     if (!fullHand || fullHand.length !== 8) return null;
-
     const ranks = fullHand.map(c => getRankValue(c));
-    const rankCounts = ranks.reduce((acc, rank) => {
-        acc[rank] = (acc[rank] || 0) + 1;
-        return acc;
-    }, {});
+    const rankCounts = ranks.reduce((acc, rank) => { acc[rank] = (acc[rank] || 0) + 1; return acc; }, {});
     const counts = Object.values(rankCounts);
-
-    // 检查四条
-    if (counts.includes(4)) {
-        return SPECIAL_HAND_TYPES.FOUR_OF_A_KIND;
-    }
-
-    // 检查四对
-    if (counts.length === 4 && counts.every(c => c === 2)) {
-        return SPECIAL_HAND_TYPES.FOUR_PAIRS;
-    }
-    
-    // 三顺子和三同花顺的检测逻辑非常复杂，需要穷举所有分区。
-    // 这里暂时不实现，以保证核心逻辑的稳定。
-    
+    if (counts.includes(4)) return EIGHT_GAME_SPECIAL_HAND_TYPES.FOUR_OF_A_KIND;
+    if (counts.length === 4 && counts.every(c => c === 2)) return EIGHT_GAME_SPECIAL_HAND_TYPES.FOUR_PAIRS;
     return null;
 };
 
-/**
- * 辅助函数：生成数组的所有组合
- * @param {Array} array - 输入数组
- * @param {number} k - 组合的长度
- * @returns {Array<Array>}
- */
 const combinations = (array, k) => {
     const result = [];
-    function f(prefix, arr, n) {
-        if (n === 0) {
-            result.push(prefix);
-            return;
-        }
-        for (let i = 0; i < arr.length; i++) {
-            f(prefix.concat(arr[i]), arr.slice(i + 1), n - 1);
-        }
-    }
+    function f(p, a, n) { if (n === 0) { result.push(p); return; } for (let i = 0; i < a.length; i++) f(p.concat(a[i]), a.slice(i + 1), n - 1); }
     f([], array, k);
     return result;
 };
 
 /**
- * 为AI玩家找到八张牌的最佳（或至少是合法）排列组合 (2-3-3)
- * 尝试找到一个符合“后道 >= 中道 >= 头道”规则的有效排列。
- * 注意：此函数目前找到的是第一个有效排列，而非数学上的“最佳”排列。
- * 真正的“最佳”排列需要更复杂的评估函数和穷举比较所有有效排列。
- * @param {Array} fullHand - 玩家的8张手牌
- * @returns {{front: Array, middle: Array, back: Array}|null} 有效的牌墩排列或null
+ * 【已修改】AI 智能理牌
  */
-export const getAIEightBestArrangement = (fullHand) => {
+export const getAIEightGameBestArrangement = (fullHand) => {
     if (!fullHand || fullHand.length !== 8) return null;
-
     const allFrontHands = combinations(fullHand, 2);
-
     for (const currentFront of allFrontHands) {
         const remaining6 = fullHand.filter(card => !currentFront.some(fc => fc.id === card.id));
         const allMiddleHands = combinations(remaining6, 3);
-
         for (const currentMiddle of allMiddleHands) {
             const currentBack = remaining6.filter(card => !currentMiddle.some(mc => mc.id === card.id));
-            const currentArrangement = { front: currentFront, middle: currentMiddle, back: currentBack };
-
-            // 验证此排列是否符合八张牌的规则 (后道 >= 中道 >= 头道)
-            if (validateEightArrangement(currentArrangement).isValid) {
-                return currentArrangement; // 返回找到的第一个有效排列
+            if (validateEightGameArrangement({ front: currentFront, middle: currentMiddle, back: currentBack }).isValid) {
+                return { front: currentFront, middle: currentMiddle, back: currentBack };
             }
         }
     }
-
-    console.warn("WARNING: No valid 8-card arrangement found for the hand.", fullHand);
-    return null; // 如果找不到任何有效排列
+    console.warn("AI Warning: No valid 8-card arrangement found.", fullHand);
+    return null;
 };

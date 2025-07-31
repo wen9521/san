@@ -1,5 +1,13 @@
 import React, { createContext, useState, useContext, useCallback, useEffect } from 'react';
-import { getAIEightBestArrangement, validateEightArrangement, sortCardsByRank } from '../utils/eightLogic';
+// 【已修改】导入重命名后的函数
+import { 
+    getAIEightGameBestArrangement, 
+    validateEightGameArrangement, 
+    sortEightGameCardsByRank, 
+    evaluateEightGameHand,
+    calculateEightGameTotalScore,
+    checkForEightGameSpecialHand 
+} from '../utils/eightLogic';
 
 const EightGameContext = createContext();
 
@@ -11,6 +19,7 @@ export const useEightGame = () => {
     return context;
 };
 
+// 【已修改】重命名发牌函数以示区分
 const dealCardsForEightGame = () => {
     const suits = ['S', 'H', 'C', 'D'];
     const ranks = ['2', '3', '4', '5', '6', '7', '8', '9', 'T', 'J', 'Q', 'K', 'A'];
@@ -18,13 +27,13 @@ const dealCardsForEightGame = () => {
     for (const suit of suits) {
         for (const rank of ranks) {
             const cardId = `${rank.toLowerCase()}_of_${suit.toLowerCase()}`;
+            // 卡牌对象现在也包含原始rank和suit
             deck.push({ id: cardId, suit, rank });
         }
     }
     deck = deck.sort(() => Math.random() - 0.5);
     const hands = [];
-    // 只发两手牌：一个给玩家，一个给AI
-    for (let i = 0; i < 2; i++) {
+    for (let i = 0; i < 2; i++) { // 只发两手牌
         hands.push(deck.slice(i * 8, (i + 1) * 8));
     }
     return hands;
@@ -41,16 +50,16 @@ export const EightGameProvider = ({ children }) => {
         const humanPlayer = {
             id: 'player',
             name: '你',
-            hand: sortCardsByRank(hands[0]),
-            rows: null, // 初始时没有牌型
+            hand: sortEightGameCardsByRank(hands[0]), // 【已修改】
+            rows: null,
             isReady: false,
         };
 
         const aiPlayer = {
             id: 'ai1',
             name: 'AI 对手',
-            hand: sortCardsByRank(hands[1]),
-            rows: null, // AI的牌型也先设为null
+            hand: sortEightGameCardsByRank(hands[1]), // 【已修改】
+            rows: null,
             isReady: false,
         };
         
@@ -64,17 +73,41 @@ export const EightGameProvider = ({ children }) => {
     }, [startGame]);
 
     const setPlayerArrangement = (playerId, newRows) => {
+        // 【已修改】使用新的验证函数
+        const validation = validateEightGameArrangement(newRows);
+        if (!validation.isValid) {
+            console.error("Attempted to set invalid arrangement:", validation.message);
+            return;
+        }
+
+        // 为玩家的每个牌墩评估牌型名称
+        const evaluatedRows = {
+            front: newRows.front,
+            middle: newRows.middle,
+            back: newRows.back,
+            frontType: evaluateEightGameHand(newRows.front).type,
+            middleType: evaluateEightGameHand(newRows.middle).type,
+            backType: evaluateEightGameHand(newRows.back).type,
+        };
+
         setPlayers(prevPlayers => {
-            // 首先更新当前玩家的牌型和状态
             const updatedPlayers = prevPlayers.map(p =>
-                p.id === playerId ? { ...p, rows: newRows, isReady: true } : p
+                p.id === playerId ? { ...p, rows: evaluatedRows, isReady: true } : p
             );
 
-            // 找到AI玩家并为其设置最佳牌型
             return updatedPlayers.map(p => {
                 if (p.id.startsWith('ai')) {
-                    const aiBestArrangement = getAIEightBestArrangement(p.hand);
-                    return { ...p, rows: aiBestArrangement, isReady: true };
+                    // 【已修改】使用新的AI理牌函数
+                    const aiBestArrangement = getAIEightGameBestArrangement(p.hand);
+                    if (aiBestArrangement) {
+                        const aiEvaluatedRows = {
+                           ...aiBestArrangement,
+                            frontType: evaluateEightGameHand(aiBestArrangement.front).type,
+                            middleType: evaluateEightGameHand(aiBestArrangement.middle).type,
+                            backType: evaluateEightGameHand(aiBestArrangement.back).type,
+                        };
+                        return { ...p, rows: aiEvaluatedRows, isReady: true };
+                    }
                 }
                 return p;
             });

@@ -5,7 +5,8 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useGame } from '../context/GameContext';
 import PlayerStatus from '../components/PlayerStatus';
 import { GameRow } from '../components/GameRow';
-import { sortCardsByRank } from '../utils/thirteenLogic';
+// 【已修复】导入了正确的函数名
+import { sortCards } from '../utils/thirteenLogic';
 import '../styles/App.css';
 
 function ThirteenGamePage() {
@@ -26,15 +27,11 @@ function ThirteenGamePage() {
         if (location.state?.mode === 'offline') {
             startOfflineGame();
         }
-        // 【已移除】不再在此处重置游戏
-        // return () => {
-        //     resetGame();
-        // };
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const handleDutouScoreClick = (dutouPlayerId, score) => {
-        if (dutouPlayerId === myId) return; // 不能应战自己的独头
+        if (dutouPlayerId === myId) return;
         const challenger = players.find(p => p.id === myId);
         if (challenger) {
              challengeDutou(dutouPlayerId, myId, challenger.name);
@@ -45,11 +42,9 @@ function ThirteenGamePage() {
         navigate('/');
     };
     
-    // 【已修改】
     const handleStartComparison = () => {
         const result = startComparison();
         if (result.success) {
-            // 将比牌结果通过 state 直接传递给下一页
             navigate('/thirteen/comparison', { state: { results: result.results } });
         } else {
             alert(result.message || "牌型不合法，请调整后再试。");
@@ -87,7 +82,8 @@ function ThirteenGamePage() {
             }
         });
 
-        newRows[targetRowId] = sortCardsByRank([...newRows[targetRowId], ...movedCards]);
+        // 【已修复】调用了正确的函数名
+        newRows[targetRowId] = sortCards([...newRows[targetRowId], ...movedCards]);
 
         updatePlayerRows(newRows);
         setSelectedCardIds([]);

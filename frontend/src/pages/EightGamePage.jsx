@@ -1,158 +1,225 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Box, Typography, Button, Paper, Grid } from '@mui/material';
-import { DndProvider } from 'react-dnd';
-import { HTML5Backend } from 'react-dnd-html5-backend';
+import React, { useState, useEffect } from 'react';
+import { Box, Typography, Button, Paper, Stack, Dialog, DialogTitle, DialogContent, DialogActions, Chip } from '@mui/material';
 import HandDisplay from '../components/HandDisplay';
-import { GameRow } from '../components/GameRow';
 import { useEightGame } from '../context/EightGameContext';
-import { validateEightArrangement, checkForSpecialHand } from '../utils/eightLogic';
+import { validateEightArrangement, checkForSpecialHand, calculateTotalScore } from '../utils/eightLogic';
 import SpecialHandDialog from '../components/SpecialHandDialog';
 
-const cardHeight = 112;
+// 【已修复】将理牌区的点击处理函数传入
+function ClassicEightTable({ players, highlightId, editableRows, onConfirm, confirmEnabled, onSelectCard, selectedCard, onPlaceCard }) {
+  return (
+    <Box sx={{ width: '100%', mt: 2 }}>
+      <Stack direction="row" spacing={2} justifyContent="center" alignItems="flex-start">
+        {players.map((player) => (
+          <Paper
+            key={player.id}
+            sx={{
+              p: 2,
+              minWidth: 320, // 增大了宽度以适应布局
+              minHeight: 250,
+              background: player.id === highlightId ? 'rgba(255,255,200,0.13)' : 'rgba(255,255,255,0.05)',
+              border: player.id === highlightId ? '2px solid #ffd700' : '1px solid rgba(255,255,255,0.2)',
+              boxShadow: player.id === highlightId ? '0 0 10px #ffd700' : '',
+            }}
+          >
+            <Typography align="center" variant="subtitle1" sx={{ mb: 1, color: player.id === highlightId ? '#ffd700' : '#fff', fontWeight: 'bold' }}>
+              {player.name}
+            </Typography>
+            {player.id === highlightId ? (
+              <>
+                <Typography color="primary" sx={{ mb: 1 }}>点击手牌进行选择</Typography>
+                {/* 【已修复】传入 onCardClick 和 selectedCard */}
+                <HandDisplay hand={player.hand} onCardClick={onSelectCard} selectedCard={selectedCard} />
 
-const PlayerDisplay = ({ player }) => {
-  if (!player || !player.rows) {
-    return <Paper sx={{ height: '100%', background: 'rgba(0,0,0,0.2)' }} />;
-  }
-  
-  const { front, middle, back } = player.rows;
-
-  const OverlappedHand = ({ cards, top, zIndex }) => (
-    <Box sx={{ position: 'absolute', top: `${top}px`, left: 0, right: 0, zIndex }}>
-      <HandDisplay cards={cards} source="rows" />
+                <Box sx={{ mt: 2, display: 'flex', gap: 1, justifyContent: 'center' }}>
+                  {/* 【已修复】为每个理牌区添加点击事件 */}
+                  <Box onClick={() => onPlaceCard('front')} sx={{ p: 1, border: '1px dashed grey', borderRadius: 1, cursor: 'pointer' }}>
+                    <Typography>头道 (2)</Typography>
+                    <HandDisplay hand={editableRows.front} />
+                  </Box>
+                  <Box onClick={() => onPlaceCard('middle')} sx={{ p: 1, border: '1px dashed grey', borderRadius: 1, cursor: 'pointer' }}>
+                    <Typography>中道 (3)</Typography>
+                    <HandDisplay hand={editableRows.middle} />
+                  </Box>
+                  <Box onClick={() => onPlaceCard('back')} sx={{ p: 1, border: '1px dashed grey', borderRadius: 1, cursor: 'pointer' }}>
+                    <Typography>后道 (3)</Typography>
+                    <HandDisplay hand={editableRows.back} />
+                  </Box>
+                </Box>
+                <Button sx={{ mt: 2, width: '100%' }} variant="contained" disabled={!confirmEnabled} onClick={onConfirm}>确认分牌</Button>
+              </>
+            ) : (
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                  <Typography variant="caption">头道: {player.rows?.frontType || '未知'}</Typography>
+                  <HandDisplay hand={player.rows?.front || []} />
+                  <Typography variant="caption">中道: {player.rows?.middleType || '未知'}</Typography>
+                  <HandDisplay hand={player.rows?.middle || []} />
+                  <Typography variant="caption">后道: {player.rows?.backType || '未知'}</Typography>
+                  <HandDisplay hand={player.rows?.back || []} />
+              </Box>
+            )}
+          </Paper>
+        ))}
+      </Stack>
     </Box>
   );
+}
 
-  return (
-    <Paper
-      elevation={3}
-      sx={{
-        position: 'relative',
-        height: '100%',
-        display: 'flex',
-        flexDirection: 'column',
-        background: 'rgba(255, 255, 255, 0.08)',
-        backdropFilter: 'blur(10px)',
-        border: '1px solid rgba(255, 255, 255, 0.2)',
-        color: 'white',
-        overflow: 'hidden',
-      }}
-    >
-      <Typography variant="h6" sx={{ p: 1, textAlign: 'center', background: 'rgba(0,0,0,0.2)', fontSize: '0.9rem' }}>
-        {player.name}
-      </Typography>
-      <Box sx={{ flexGrow: 1, position: 'relative' }}>
-        <Box sx={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, overflow: 'hidden' }}>
-          <OverlappedHand cards={front} top={0} zIndex={1} />
-          <OverlappedHand cards={middle} top={cardHeight / 2 - 20} zIndex={2} />
-          <OverlappedHand cards={back} top={cardHeight - 40} zIndex={3} />
-        </Box>
-      </Box>
-    </Paper>
-  );
-};
+function ComparisonDialog({ open, players, mainPlayerId, onRestart }) {
+    if (!open) return null;
+
+    const mainPlayer = players.find(p => p.id === mainPlayerId);
+    const aiPlayer = players.find(p => p.id !== mainPlayerId);
+  
+    if (!mainPlayer || !aiPlayer) {
+      return (
+        <Dialog open={open} fullWidth>
+            <DialogTitle>等待玩家数据...</DialogTitle>
+        </Dialog>
+      );
+    }
+  
+    const result = calculateTotalScore(mainPlayer.rows, aiPlayer.rows);
+  
+    return (
+      <Dialog open={open} fullWidth maxWidth="md">
+        <DialogTitle align="center">比牌结果</DialogTitle>
+        <DialogContent>
+          <Stack direction="row" spacing={2} justifyContent="center">
+            {[mainPlayer, aiPlayer].map(p => (
+              <Paper key={p.id} sx={{ p: 2, flex: 1 }}>
+                <Typography align="center" variant="h6">{p.name}</Typography>
+                <Stack spacing={1} sx={{mt: 1}}>
+                  <Box>
+                    <Chip label={`头道: ${p.rows.frontType}`} size="small" />
+                    <HandDisplay hand={p.rows.front} />
+                  </Box>
+                  <Box>
+                    <Chip label={`中道: ${p.rows.middleType}`} size="small" />
+                    <HandDisplay hand={p.rows.middle} />
+                  </Box>
+                  <Box>
+                    <Chip label={`后道: ${p.rows.backType}`} size="small" />
+                    <HandDisplay hand={p.rows.back} />
+                  </Box>
+                </Stack>
+              </Paper>
+            ))}
+          </Stack>
+          <Box sx={{ mt: 3, textAlign: 'center' }}>
+            <Typography variant="h5" color={result.playerAScore > 0 ? "success.main" : "error.main"}>
+              {result.playerAScore > 0 ? `你赢了！总得 +${result.playerAScore} 水` : `你输了！总得 ${result.playerAScore} 水`}
+            </Typography>
+            <Typography variant="body2" sx={{ mt: 1, color: '#aaa' }}>
+              {result.breakdown.map(b => `【${b.rowName}】${b.message}`).join(' ')}
+            </Typography>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={onRestart} variant="contained" size="large">再玩一局</Button>
+        </DialogActions>
+      </Dialog>
+    );
+}
 
 const EightGamePage = () => {
-  const { players, currentPlayer, setPlayerArrangement, advanceToComparison, comparisonResult, isGameActive } = useEightGame();
-  
+  const { players, currentPlayer, setPlayerArrangement, startGame } = useEightGame();
   const [rows, setRows] = useState({ front: [], middle: [], back: [] });
   const [isValid, setIsValid] = useState(false);
   const [specialHand, setSpecialHand] = useState(null);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [showComparison, setShowComparison] = useState(false);
+  const [showSpecialDialog, setShowSpecialDialog] = useState(false);
+  const [allReady, setAllReady] = useState(false);
+  const [selectedCard, setSelectedCard] = useState(null); // 【新增】
 
   useEffect(() => {
     if (currentPlayer?.hand) {
-      const detectedSpecialHand = checkForSpecialHand(currentPlayer.hand);
-      if (detectedSpecialHand) {
-        setSpecialHand(detectedSpecialHand);
-        setDialogOpen(true);
-      }
+        setRows({ front: [], middle: [], back: [] });
+        setIsValid(false);
+        setAllReady(false);
+        setSelectedCard(null);
+        
+        const detectedSpecial = checkForSpecialHand(currentPlayer.hand);
+        if (detectedSpecial) {
+            setSpecialHand(detectedSpecial);
+            setShowSpecialDialog(true);
+        } else {
+            setSpecialHand(null);
+            setShowSpecialDialog(false);
+        }
     }
   }, [currentPlayer]);
 
-  // 【新增】监听所有玩家是否准备就绪
   useEffect(() => {
-    if (isGameActive && players.length > 0 && players.every(p => p.isReady)) {
-        // 当所有玩家都准备好后，触发比牌逻辑
-        advanceToComparison();
-        setShowComparison(true);
+    if (players.length > 0 && players.every(p => p.isReady)) {
+      setAllReady(true);
     }
-  }, [players, isGameActive, advanceToComparison]);
+  }, [players]);
 
-
-  const handleDrop = (card, targetRow) => {
-    const newRows = { front: [...rows.front], middle: [...rows.middle], back: [...rows.back] };
-    Object.keys(newRows).forEach(rowName => {
-      newRows[rowName] = newRows[rowName].filter(c => c.id !== card.id);
-    });
-    newRows[targetRow] = [...newRows[targetRow], card];
-    setRows(newRows);
-    const validation = validateEightArrangement(newRows);
-    setIsValid(validation.isValid);
+  // 【已修复】理牌逻辑拆分
+  const handleSelectCard = (card) => {
+    setSelectedCard(card.id === selectedCard?.id ? null : card); // 再次点击取消选择
   };
   
+  const handlePlaceCard = (targetRow) => {
+    if (!selectedCard) return; // 如果没有选中的牌，则不执行任何操作
+
+    // 从所有手牌和牌道中移除该卡牌
+    const remainingHand = currentPlayer.hand.filter(c => c.id !== selectedCard.id);
+    let newRows = { ...rows };
+    Object.keys(newRows).forEach(row => {
+        newRows[row] = newRows[row].filter(c => c.id !== selectedCard.id);
+    });
+
+    // 将卡牌添加到目标牌道
+    newRows[targetRow] = [...newRows[targetRow], selectedCard];
+
+    setRows(newRows);
+    setIsValid(validateEightArrangement(newRows).isValid);
+    setSelectedCard(null); // 放置后取消选择
+  };
+
   const handleConfirm = () => {
     const validation = validateEightArrangement(rows);
     if (validation.isValid) {
-      // 核心改动：只设置当前玩家的牌型，并将其标记为准备就绪
       setPlayerArrangement(currentPlayer.id, rows);
     } else {
-      alert(validation.message);
+      alert(validation.message || "分牌不合法，请检查！");
     }
   };
 
-  const handleSpecialHandDecision = (useSpecial) => {
-    setDialogOpen(false);
-    if (useSpecial) {
-      console.log(`${currentPlayer.name} uses special hand: ${specialHand.name}`);
-    }
+  const handleRestart = () => {
+    startGame();
   };
 
-  // 【视图更新】使用 showComparison 状态来决定是否显示比牌视图
-  if (showComparison) {
-    return (
-      <Box sx={{ width: '100vw', height: '100vh', p: 1, background: 'radial-gradient(circle, #2c4a3b 0%, #1a2a28 100%)', boxSizing: 'border-box' }}>
-        <Grid container spacing={1} sx={{ height: '100%' }}>
-          {players.map(p => (
-            <Grid item xs={6} sm={4} md={2} key={p.id} sx={{ height: '33.33%' }}>
-              <PlayerDisplay player={p} />
-            </Grid>
-          ))}
-        </Grid>
-        {/* 这里可以加入一个 "再玩一局" 的按钮 */}
-      </Box>
-    );
+  if (!currentPlayer) {
+    return <Typography sx={{ color: 'white', mt: 2 }}>正在加载...</Typography>;
   }
 
-  if (!currentPlayer || !isGameActive) {
-      return <Typography sx={{color: "white", p: 2}}>正在加载对局...</Typography>
-  }
-
-  // 默认显示理牌界面
   return (
-    <DndProvider backend={HTML5Backend}>
-      <Box sx={{ p: 2, background: '#222', minHeight: '100vh', color: 'white' }}>
-        <Typography variant="h4">{currentPlayer.name}的理牌阶段</Typography>
-        <HandDisplay cards={currentPlayer.hand} source="hand" />
-        
-        <Box sx={{ my: 3 }}>
-          <GameRow name="后道 (3)" cards={rows.back} onDrop={(card) => handleDrop(card, 'back')} />
-          <GameRow name="中道 (3)" cards={rows.middle} onDrop={(card) => handleDrop(card, 'middle')} />
-          <GameRow name="头道 (2)" cards={rows.front} onDrop={(card) => handleDrop(card, 'front')} />
-        </Box>
-        
-        <Button variant="contained" color="primary" onClick={handleConfirm} disabled={!isValid}>
-          确认牌型
-        </Button>
-        <SpecialHandDialog 
-          open={dialogOpen}
-          specialHandName={specialHand?.name}
-          onClose={() => handleSpecialHandDecision(false)}
-          onConfirm={() => handleSpecialHandDecision(true)}
-        />
-      </Box>
-    </DndProvider>
+    <Box sx={{ background: 'linear-gradient(to bottom, #232526, #414345)', minHeight: '100vh', color: 'white', p: 2 }}>
+      {allReady ? (
+        <ComparisonDialog open={allReady} players={players} mainPlayerId={currentPlayer.id} onRestart={handleRestart} />
+      ) : (
+        <>
+          <Typography variant="h4" align="center">八张牌游戏</Typography>
+          <ClassicEightTable
+            players={players}
+            highlightId={currentPlayer.id}
+            editableRows={rows}
+            onConfirm={handleConfirm}
+            confirmEnabled={isValid}
+            onSelectCard={handleSelectCard}
+            selectedCard={selectedCard}
+            onPlaceCard={handlePlaceCard}
+          />
+          <SpecialHandDialog open={showSpecialDialog} specialHandName={specialHand?.name} onClose={() => setShowSpecialDialog(false)} onConfirm={() => setShowSpecialDialog(false)} />
+          <Box sx={{ mt: 3, textAlign: 'center', color: '#bbb' }}>
+            <Typography>玩法: 先点击你的手牌, 再点击目标牌道(头/中/后)进行分配。</Typography>
+            {selectedCard && <Typography color="primary">已选择: {selectedCard.id.replace('_', ' ')}</Typography>}
+          </Box>
+        </>
+      )}
+    </Box>
   );
 };
 

@@ -76,31 +76,30 @@ export const GameProvider = ({ children }) => {
         });
     };
 
+    // 【已修改】
     const startComparison = () => {
         let finalPlayers = players;
         
-        // 在试玩模式下，强制使用最佳牌型并设置为准备状态
         if (isOfflineMode) {
              const player = players.find(p => p.id === 'player');
              if (player && !player.isReady) {
                 const bestRows = getAIBestArrangement(player.hand);
                 finalPlayers = players.map(p => p.id === 'player' ? { ...p, rows: bestRows, isReady: true } : p);
-                setPlayers(finalPlayers); // 确保状态被更新
+                setPlayers(finalPlayers); 
              }
         } else {
-            // 在线模式，如果玩家未准备，则设置为准备状态
             const player = players.find(p => p.id === 'player');
             if(player && !player.isReady) {
                  finalPlayers = players.map(p => p.id === 'player' ? { ...p, isReady: true } : p);
-                 setPlayers(finalPlayers); // 确保状态被更新
+                 setPlayers(finalPlayers); 
             }
         }
 
         if (finalPlayers.every(p => p.isReady)) {
             const results = calculateAllScores(finalPlayers);
-            console.log("GameContext: Setting comparisonResult to:", results); // 添加日志
-            setComparisonResult(results);
-            return { success: true };
+            setComparisonResult(results); // 仍然设置Context，以防有其他组件监听
+            // 将计算结果直接返回
+            return { success: true, results: results };
         }
         
         return { success: false, message: "所有玩家尚未准备就绪。" };

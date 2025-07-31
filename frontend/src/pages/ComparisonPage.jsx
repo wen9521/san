@@ -1,5 +1,5 @@
 import React, { useMemo, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Box, Typography, Button, Paper, CircularProgress } from '@mui/material';
 import { useGame } from '../context/GameContext';
 import '../styles/App.css'; 
@@ -39,9 +39,11 @@ const StackedHand = ({ cards }) => {
 
 const ComparisonPage = () => {
   const navigate = useNavigate();
-  const { comparisonResult, players, resetGame } = useGame();
+  const location = useLocation(); // 【新增】获取路由信息
+  const { players, resetGame } = useGame();
 
-  console.log("ComparisonPage: Rendering with comparisonResult:", comparisonResult); // 添加日志
+  // 【已修改】优先从路由 state 获取比牌结果
+  const comparisonResult = location.state?.results || null;
 
   useEffect(() => {
     return () => {
@@ -72,10 +74,10 @@ const ComparisonPage = () => {
       <Box className="page-container" sx={{ textAlign: 'center' }}>
         <CircularProgress sx={{ mb: 2 }} />
         <Typography variant="h5" color="white" gutterBottom>
-          正在等待比牌结果...
+          正在计算比牌结果...
         </Typography>
         <Typography color="text.secondary">
-          如果没有自动跳转，请确保所有玩家都已准备好。
+          如果长时间无响应，请返回主页重试。
         </Typography>
         <Button sx={{ mt: 3 }} variant="contained" onClick={handleReturnHome}>返回主页</Button>
       </Box>

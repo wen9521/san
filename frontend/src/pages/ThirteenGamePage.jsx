@@ -43,10 +43,13 @@ function ThirteenGamePage() {
     const handleExitGame = () => {
         navigate('/');
     };
+    
+    // 【已修改】
     const handleStartComparison = () => {
         const result = startComparison();
         if (result.success) {
-            navigate('/thirteen/comparison');
+            // 将比牌结果通过 state 直接传递给下一页
+            navigate('/thirteen/comparison', { state: { results: result.results } });
         } else {
             alert(result.message || "牌型不合法，请调整后再试。");
         }

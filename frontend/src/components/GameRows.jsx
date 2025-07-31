@@ -1,9 +1,8 @@
 import React from 'react';
 import { Box, Typography, Chip } from '@mui/material';
-import PokerCard from './PokerCard';
+import { PokerCard } from './PokerCard'; // Corrected import
 import '../styles/App.css';
 
-// onCardReturn 是一个新函数，用于处理点击已放置卡牌的事件
 const Row = ({ name, cards, onRowClick, typeName, onCardReturn }) => (
   <Box className="game-row" onClick={() => onRowClick(cards)}>
     <Typography variant="h6" color="secondary" align="left" gutterBottom>
@@ -12,14 +11,14 @@ const Row = ({ name, cards, onRowClick, typeName, onCardReturn }) => (
     <Box className="game-row-content">
       {cards.length > 0 ? (
         cards.filter(card => card && card.id).map((card, i) => (
-          // 为PokerCard添加 onClick 事件
           <PokerCard 
             key={card.id} 
-            cardData={card} 
+            // 【核心修复】确保属性名为 card
+            card={card} 
             index={i}
             onClick={(e) => {
-              e.stopPropagation(); // 阻止事件冒泡到父级 onRowClick
-              onCardReturn(card);  // 调用回调函数
+              e.stopPropagation();
+              if (onCardReturn) onCardReturn(card);
             }}
           />
         ))
@@ -30,7 +29,6 @@ const Row = ({ name, cards, onRowClick, typeName, onCardReturn }) => (
   </Box>
 );
 
-// onCardReturn 是一个新属性
 const GameRows = ({ rows, onRowClick, validationResult, onCardReturn }) => {
     const details = validationResult?.details || {};
     return (

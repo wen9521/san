@@ -1,28 +1,19 @@
 import React from 'react';
 import { Box, Typography, Chip } from '@mui/material';
-import PokerCard from './PokerCard';
-import '../styles/App.css'; // 复用现有样式
+import { PokerCard } from './PokerCard'; // Corrected import path
+import '../styles/App.css'; 
 
-// 单行组件，带输赢结果
 const AIResultRow = ({ name, cards, typeName, result }) => {
     let resultColor = 'default';
     let resultText = '';
-    if (result === 'win') {
-        resultColor = 'success';
-        resultText = '胜';
-    } else if (result === 'loss') {
-        resultColor = 'error';
-        resultText = '负';
-    } else if (result === 'tie') {
-        resultColor = 'warning';
-        resultText = '平';
-    }
+    if (result === 'win') { resultColor = 'success'; resultText = '胜'; } 
+    else if (result === 'loss') { resultColor = 'error'; resultText = '负'; } 
+    else if (result === 'tie') { resultColor = 'warning'; resultText = '平'; }
 
-    // 修复：过滤无效card
     const validCards = Array.isArray(cards) ? cards.filter(card => card && card.id) : [];
 
     return (
-        <Box className="game-row" sx={{ borderColor: result !== null ? resultColor + '.main' : 'rgba(255, 255, 255, 0.3)' }}>
+        <Box className="game-row" sx={{ borderColor: result !== null ? `${resultColor}.main` : 'rgba(255, 255, 255, 0.3)' }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Typography variant="h6" color="secondary" align="left">
                     {name} {typeName && <Chip label={typeName} color="secondary" size="small" sx={{ ml: 1 }} />}
@@ -31,14 +22,14 @@ const AIResultRow = ({ name, cards, typeName, result }) => {
             </Box>
             <Box className="game-row-content" sx={{ mt: 1 }}>
                 {validCards.map((card, i) => (
-                    <PokerCard key={card.id} cardData={card} index={i} />
+                    // 【核心修复】确保属性名为 card
+                    <PokerCard key={card.id} card={card} index={i} />
                 ))}
             </Box>
         </Box>
     );
 }
 
-// AI牌局主组件
 const AIGameDisplay = ({ aiRows, comparisonResult }) => {
     if (!aiRows) return null;
 

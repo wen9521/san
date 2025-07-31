@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext, useCallback, useEffect } from 'react';
+import React, { createContext, useState, useContext, useCallback, useEffect, useRef } from 'react';
 import { 
     getAIEightGameBestArrangement, 
     validateEightGameArrangement, 
@@ -16,7 +16,6 @@ export const useEightGame = () => {
     return context;
 };
 
-// 6人，每人8张
 const dealCardsForEightGame = () => {
     const suits = ['S', 'H', 'C', 'D'];
     const ranks = ['2', '3', '4', '5', '6', '7', '8', '9', 'T', 'J', 'Q', 'K', 'A'];
@@ -40,115 +39,99 @@ export const EightGameProvider = ({ children }) => {
     const [currentPlayer, setCurrentPlayer] = useState(null);
     const [isGameActive, setIsGameActive] = useState(false);
     const [comparisonResult, setComparisonResult] = useState(null);
-    const [dutouCurrent, setDutouCurrent] = useState({});
-    const [dutouHistory, setDutouHistory] = useState({});
-    const [specialHand, setSpecialHand] = useState(null);
+    
+    // Ref to prevent AI arrangement from running multiple times
+    const aiArrangementStarted = useRef(false);
 
     const startGame = useCallback(() => {
         const hands = dealCardsForEightGame();
         const playerNames = ['你', '小明', '小红', '小刚', '小强', '小黑'];
         const ids = ['player', 'ai1', 'ai2', 'ai3', 'ai4', 'ai5'];
-        const playerList = ids.map((id, idx) => ({
-            id,
-            name: playerNames[idx],
-            hand: sortEightGameCardsByRank(hands[idx]),
-            rows: null,
-            isReady: false
-        }));
+
+        const playerList = ids.map((id, idx) => {
+            const hand = sortEightGameCardsByRank(hands[idx]);
+            // 【核心修改】为玩家直接设置初始牌墩
+            const initialRows = (id === 'player') 
+                ? { front: [], middle: hand, back: [] } 
+                : { front: [], middle: [], back: [] };
+
+            return { id, name: playerNames[idx], hand, rows: initialRows, isReady: false };
+        });
+
         setPlayers(playerList);
         setCurrentPlayer(playerList[0]);
         setIsGameActive(true);
         setComparisonResult(null);
-        setDutouCurrent({});
-        setDutouHistory({});
-        setSpecialHand(null);
+        aiArrangementStarted.current = false;
     }, []);
+
+    // 【新增】AI异步、后台理牌
+    useEffect(() => {
+        if (isGameActive && players.length > 0 && !aiArrangementStarted.current) {
+            const aiPlayers = players.filter(p => p.id.startsWith('ai'));
+            if (aiPlayers.length > 0) {
+                aiArrangementStarted.current = true;
+                
+                aiPlayers.forEach(aiPlayer => {
+                    setTimeout(() => {
+                        const bestRows = getAIEightGameBestArrangement(aiPlayer.hand);
+                        setPlayers(prev => prev.map(p => 
+                            p.id === aiPlayer.id ? { ...p, rows: bestRows, isReady: true } : p
+                        ));
+                    }, 50);
+                });
+            }
+        }
+    }, [isGameActive, players]);
 
     useEffect(() => {
         startGame();
     }, [startGame]);
 
+    // 【已重构】此函数现在只更新玩家牌墩
     const setPlayerArrangement = (playerId, newRows) => {
-        const validation = validateEightGameArrangement(newRows);
-        if (!validation.isValid) {
-            console.error("Attempted to set invalid arrangement:", validation.message);
-            return;
-        }
-        const evaluatedRows = {
-            ...newRows,
-            frontType: evaluateEightGameHand(newRows.front).type,
-            middleType: evaluateEightGameHand(newRows.middle).type,
-            backType: evaluateEightGameHand(newRows.back).type,
-        };
-        setPlayers(prevPlayers => {
-            // AI自动理牌
-            return prevPlayers.map(p => {
-                if (p.id === playerId) {
-                    return { ...p, rows: evaluatedRows, isReady: true };
-                }
-                if (p.id.startsWith('ai') && (!p.rows || !p.isReady)) {
-                    const aiBest = getAIEightGameBestArrangement(p.hand);
-                    const aiEvaluated = {
-                        ...aiBest,
-                        frontType: evaluateEightGameHand(aiBest.front).type,
-                        middleType: evaluateEightGameHand(aiBest.middle).type,
-                        backType: evaluateEightGameHand(aiBest.back).type,
-                    };
-                    return { ...p, rows: aiEvaluated, isReady: true };
-                }
-                return p;
-            });
-        });
+        setPlayers(prevPlayers => 
+            prevPlayers.map(p => 
+                p.id === playerId ? { ...p, rows: newRows, isReady: false } : p
+            )
+        );
     };
 
     const autoArrangePlayerHand = () => {
         const player = players.find(p => p.id === 'player');
         if (!player) return;
         const best = getAIEightGameBestArrangement(player.hand);
-        setPlayerArrangement('player', best);
+        setPlayers(prev => prev.map(p => p.id === 'player' ? { ...p, rows: best, isReady: true } : p));
     };
 
-    // 6人两两比牌，每人得分累加
     const startComparison = () => {
-        if (!players.every(p => p.rows && p.isReady)) return { success: false, message: "所有玩家尚未准备就绪。" };
-        let scores = players.map(p => ({ playerId: p.id, name: p.name, totalScore: 0 }));
-        for (let i = 0; i < players.length; i++) {
-            for (let j = 0; j < players.length; j++) {
-                if (i === j) continue;
-                const score = calculateEightGameTotalScore(players[i].rows, players[j].rows).playerAScore;
-                scores[i].totalScore += score;
+        // 确认前，将玩家标记为 ready
+        let finalPlayers = players;
+        const player = finalPlayers.find(p => p.id === 'player');
+        if(player && !player.isReady) {
+            finalPlayers = finalPlayers.map(p => p.id === 'player' ? { ...p, isReady: true } : p);
+            setPlayers(finalPlayers);
+        }
+        
+        if (!finalPlayers.every(p => p.isReady)) {
+            return { success: false, message: "有玩家尚未准备好。" };
+        }
+
+        let scores = finalPlayers.map(p => ({ playerId: p.id, name: p.name, totalScore: 0 }));
+        for (let i = 0; i < finalPlayers.length; i++) {
+            for (let j = i + 1; j < finalPlayers.length; j++) {
+                const result = calculateEightGameTotalScore(finalPlayers[i].rows, finalPlayers[j].rows);
+                scores[i].totalScore += result.playerAScore;
+                scores[j].totalScore += result.playerBScore;
             }
         }
-        setComparisonResult({ scores, players: players.map(p => ({ ...p })) });
-        return { success: true, results: { scores, players: players.map(p => ({ ...p })) } };
-    };
-
-    // 独头功能
-    const openDutouDialog = () => {};
-    const chooseDutouScore = (myId, score) => setDutouCurrent(prev => ({ ...prev, [myId]: { score } }));
-    const challengeDutou = (dutouPlayerId, challengerId, challengerName) => {
-        setDutouCurrent(prev => {
-            const score = prev[dutouPlayerId]?.score;
-            if (!score) return prev;
-            const newCurr = { ...prev };
-            delete newCurr[dutouPlayerId];
-            setDutouHistory(h => ({ ...h, [dutouPlayerId]: [...(h[dutouPlayerId] || []), { challengerId, challengerName, score }] }));
-            return newCurr;
-        });
+        setComparisonResult({ scores, players: finalPlayers });
+        return { success: true, results: { scores, players: finalPlayers } };
     };
 
     const value = {
-        players,
-        currentPlayer,
-        isGameActive,
-        startGame,
-        setPlayerArrangement,
-        autoArrangePlayerHand,
-        startComparison,
-        comparisonResult,
-        dutouCurrent, dutouHistory,
-        chooseDutouScore, challengeDutou, openDutouDialog,
-        specialHand, setSpecialHand
+        players, currentPlayer, isGameActive, startGame, setPlayerArrangement,
+        autoArrangePlayerHand, startComparison, comparisonResult
     };
 
     return <EightGameContext.Provider value={value}>{children}</EightGameContext.Provider>;

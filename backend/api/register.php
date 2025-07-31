@@ -89,11 +89,11 @@ if ($username === '' || $password === '') {
     exit;
 }
 
-// 11. 密码强度校验
+// 11. 密码强度校验 (已修复)
 if (strlen($password) < 6
     || ! preg_match('/[A-Z]/', $password)
     || ! preg_match('/[a-z]/', $password)
-    || ! preg_match('/d/', $password)
+    || ! preg_match('/\d/', $password)
 ) {
     http_response_code(422);
     echo json_encode([
@@ -119,11 +119,9 @@ try {
     // 13. 哈希密码
     $password_hash = password_hash($password, PASSWORD_DEFAULT);
 
-    // 14. 插入新用户，赠送初始积分
+    // 14. 插入新用户，赠送初始积分 (已修复)
     $initial_points = 1000;
-    $stmt = $pdo->prepare(
-        'INSERT INTO users (username, password_hash, points) VALUES (?, ?, ?)
-    );
+    $stmt = $pdo->prepare('INSERT INTO users (username, password_hash, points) VALUES (?, ?, ?)');
     $stmt->execute([$username, $password_hash, $initial_points]);
     $user_id = $pdo->lastInsertId();
 

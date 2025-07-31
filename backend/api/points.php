@@ -1,123 +1,163 @@
 <?php
-// --- 最终的、由您提供的完美CORS与安全设置 ---
+/**
+ * 完整的 CORS + 安全更新用户积分接口示例
+ */
 
-// 【第1步】: 定义信任的来源白名单
+// 1. 环境与白名单配置
+$devMode = false; // 生产环境设为 false
 $allowed_origins = [
-    'https://9525.ip-ddns.com',   // 您当前正在使用的域名
-    'https://gewe.dpdns.org',    // 您的线上Web前端
-    'capacitor://localhost',      // Capacitor App 的标准 Origin
-    'http://localhost',           // 某些Capacitor/Cordova环境下的 Origin
-    // 'http://localhost:5173'   // 如果您有本地Web开发环境
+    'https://9525.ip-ddns.com',
+    'https://gewe.dpdns.org',
+    'capacitor://localhost',
+    'http://localhost'
 ];
 
-// 检查请求的来源
-$request_origin = isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : '';
+// 2. 获取并（可选）记录 Origin
+$request_origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+if ($devMode) {
+    error_log('Incoming Origin: ' . ($request_origin ?: 'empty'));
+}
 
-// 打印实际接收的 Origin，便于调试
-error_log('Incoming Origin: ' . ($request_origin ?: 'empty'));
+// 3. 验证 Origin
+$is_allowed = in_array($request_origin, $allowed_origins, true);
 
-// 加上 Vary 头，避免缓存误用
-header('Vary: Origin');
+// 支持 file:// 前缀（旧版 WebView）
+if (! $is_allowed && strpos($request_origin, 'file://') === 0) {
+    $is_allowed     = true;
+    $request_origin = 'file://';
+}
 
-$is_request_allowed = false;
-
-// 【第2步】: 安全校验逻辑
-// 规则：请求的来源必须在我们定义的白名单中
-if (in_array($request_origin, $allowed_origins)) {
-    $is_request_allowed = true;
-} 
-// 对 'null' Origin 的特殊处理
-elseif ($request_origin === 'null' || empty($request_origin)) {
-    $is_request_allowed = true;
-    // 当Origin是null时，我们不能在响应头里返回'null'，通常返回一个白名单里的值
+// null/empty Origin 仅开发模式放行
+if ($devMode && ($request_origin === 'null' || $request_origin === '')) {
+    $is_allowed     = true;
     $request_origin = 'capacitor://localhost';
 }
 
-// 【第3步】: 根据校验结果设置响应头
-if (!$is_request_allowed) {
-    header("HTTP/1.1 403 Forbidden");
+// 4. 防止缓存误用
+header('Vary: Origin');
+
+// 5. 若不被允许，返回 403
+if (! $is_allowed) {
+    http_response_code(403);
     header('Content-Type: application/json; charset=utf-8');
     echo json_encode([
-        'error' => 'Forbidden: Origin not allowed.',
+        'error'       => 'Forbidden: Origin not allowed.',
         'your_origin' => $request_origin
     ], JSON_UNESCAPED_UNICODE);
-    exit();
+    exit;
 }
 
+// 6. 输出 CORS 头
 header("Access-Control-Allow-Origin: {$request_origin}");
-header("Access-Control-Allow-Credentials: true");
-header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With, X-App-Secret");
+header('Access-Control-Allow-Credentials: true');
+header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
+header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With, X-App-Secret');
+header('Access-Control-Max-Age: 86400');
 
-// 对 OPTIONS 请求明确返回 200
+// 7. 预检请求直接返回 200
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
-    exit();
+    exit;
 }
 
-// --- 您的API业务逻辑从这里开始 ---
-
-// 引入数据库连接
-require_once '../db_connect.php';
-
-// 只处理POST请求
+// 8. 只允许 POST 方法
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    http_response_code(405); // Method Not Allowed
-    echo json_encode(['success' => false, 'message' => '仅允许POST请求']);
-    exit();
+    http_response_code(405);
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode([
+        'success' => false,
+        'message' => '仅允许 POST 请求'
+    ], JSON_UNESCAPED_UNICODE);
+    exit;
 }
 
-$data = json_decode(file_get_contents('php://input'), true);
-$userId = $data['userId'] ?? null;
-$pointsChange = $data['pointsChange'] ?? null;
+// 9. 引入数据库连接（确保 $pdo 已创建并启用异常模式）
+require_once __DIR__ . '/../db_connect.php';
 
+// 10. 解析输入
+header('Content-Type: application/json; charset=utf-8');
+$input = json_decode(file_get_contents('php://input'), true);
+$userId       = $input['userId']       ?? null;
+$pointsChange = $input['pointsChange'] ?? null;
+
+// 11. 基本验证
 if ($userId === null || $pointsChange === null) {
-    http_response_code(400); // Bad Request
-    echo json_encode(['success' => false, 'message' => '缺少userId或pointsChange参数']);
-    exit();
+    http_response_code(400);
+    echo json_encode([
+        'success' => false,
+        'message' => '缺少 userId 或 pointsChange 参数'
+    ], JSON_UNESCAPED_UNICODE);
+    exit;
 }
 
-if (!is_numeric($userId) || !is_numeric($pointsChange)) {
-    http_response_code(400); // Bad Request
-    echo json_encode(['success' => false, 'message' => 'userId和pointsChange必须是数字']);
-    exit();
+if (! is_numeric($userId) || ! is_numeric($pointsChange)) {
+    http_response_code(400);
+    echo json_encode([
+        'success' => false,
+        'message' => 'userId 和 pointsChange 必须是数字'
+    ], JSON_UNESCAPED_UNICODE);
+    exit;
 }
+
+$userId       = (int) $userId;
+$pointsChange = (int) $pointsChange;
 
 try {
-    // 开始事务
+    // 12. 开启事务
     $pdo->beginTransaction();
 
-    // 1. 获取当前分数
-    $stmt = $pdo->prepare("SELECT points FROM users WHERE id = ? FOR UPDATE");
+    // 13. 锁定行并读当前积分
+    $stmt = $pdo->prepare(
+        'SELECT points FROM users WHERE id = ? FOR UPDATE'
+    );
     $stmt->execute([$userId]);
-    $user = $stmt->fetch(PDO::FETCH_ASSOC);
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    if (!$user) {
+    if (! $row) {
         $pdo->rollBack();
-        http_response_code(404); // Not Found
-        echo json_encode(['success' => false, 'message' => '用户不存在']);
-        exit();
+        http_response_code(404);
+        echo json_encode([
+            'success' => false,
+            'message' => '用户不存在'
+        ], JSON_UNESCAPED_UNICODE);
+        exit;
     }
 
-    $currentPoints = $user['points'];
-    $newPoints = $currentPoints + $pointsChange;
+    $currentPoints = (int) $row['points'];
+    $newPoints     = $currentPoints + $pointsChange;
 
-    // 2. 更新分数
-    $stmt = $pdo->prepare("UPDATE users SET points = ? WHERE id = ?");
+    // 14. 可选：不允许负分
+    if ($newPoints < 0) {
+        $pdo->rollBack();
+        http_response_code(422);
+        echo json_encode([
+            'success' => false,
+            'message' => '积分不足，无法扣减'
+        ], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    // 15. 更新积分
+    $stmt = $pdo->prepare(
+        'UPDATE users SET points = ? WHERE id = ?'
+    );
     $stmt->execute([$newPoints, $userId]);
 
-    // 提交事务
+    // 16. 提交事务
     $pdo->commit();
 
+    // 17. 返回结果
     echo json_encode([
-        'success' => true,
-        'message' => '分数更新成功',
+        'success'   => true,
+        'message'   => '积分更新成功',
         'newPoints' => $newPoints
-    ]);
+    ], JSON_UNESCAPED_UNICODE);
 
 } catch (PDOException $e) {
-    // 如果发生错误，回滚事务
     $pdo->rollBack();
-    http_response_code(500); // Internal Server Error
-    echo json_encode(['success' => false, 'message' => '数据库操作失败: ' . $e->getMessage()]);
+    http_response_code(500);
+    echo json_encode([
+        'success' => false,
+        'message' => '数据库操作失败: ' . $e->getMessage()
+    ], JSON_UNESCAPED_UNICODE);
 }

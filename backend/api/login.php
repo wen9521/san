@@ -1,98 +1,120 @@
 <?php
-// --- 最终的、由您提供的完美CORS与安全设置 ---
+/**
+ * 完整的 CORS 与登录接口示例
+ */
 
-// 【第1步】: 定义信任的来源白名单
+// 1. 环境与白名单配置
+$devMode = false; // 上线环境请务必设为 false
 $allowed_origins = [
-    'https://9525.ip-ddns.com',   // 您当前正在使用的域名
-    'https://gewe.dpdns.org',    // 您的线上Web前端
-    'capacitor://localhost',      // Capacitor App 的标准 Origin
-    'http://localhost',           // 某些Capacitor/Cordova环境下的 Origin
-    // 'http://localhost:5173'   // 如果您有本地Web开发环境
+    'https://9525.ip-ddns.com',
+    'https://gewe.dpdns.org',
+    'capacitor://localhost',
+    'http://localhost'
 ];
 
-// 检查请求的来源
-$request_origin = isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : '';
+// 2. 获取请求 Origin
+$request_origin = $_SERVER['HTTP_ORIGIN'] ?? '';
 
-// 打印实际接收的 Origin，便于调试
-error_log('Incoming Origin: ' . ($request_origin ?: 'empty'));
+// 3. 可选：调试日志（仅开发模式启用）
+if ($devMode) {
+    error_log('Incoming Origin: ' . ($request_origin ?: 'empty'));
+}
 
-// 加上 Vary 头，避免缓存误用
-header('Vary: Origin');
+// 4. 校验来源
+$is_allowed = in_array($request_origin, $allowed_origins, true);
 
-$is_request_allowed = false;
+// file:// 前缀匹配
+if (!$is_allowed && strpos($request_origin, 'file://') === 0) {
+    $is_allowed     = true;
+    $request_origin = 'file://';
+}
 
-// 【第2步】: 安全校验逻辑
-// 规则：请求的来源必须在我们定义的白名单中
-if (in_array($request_origin, $allowed_origins)) {
-    $is_request_allowed = true;
-} 
-// 对 'null' Origin 的特殊处理
-elseif ($request_origin === 'null' || empty($request_origin)) {
-    $is_request_allowed = true;
-    // 当Origin是null时，我们不能在响应头里返回'null'，通常返回一个白名单里的值
+// null/empty Origin 仅在开发模式放行
+if ($devMode && (empty($request_origin) || $request_origin === 'null')) {
+    $is_allowed     = true;
     $request_origin = 'capacitor://localhost';
 }
 
-// 【第3步】: 根据校验结果设置响应头
-if (!$is_request_allowed) {
-    header("HTTP/1.1 403 Forbidden");
+// 5. 设置 Vary 头，防止缓存误用
+header('Vary: Origin');
+
+// 6. 如果不在白名单内，直接返回 403
+if (!$is_allowed) {
+    http_response_code(403);
     header('Content-Type: application/json; charset=utf-8');
     echo json_encode([
-        'error' => 'Forbidden: Origin not allowed.',
+        'error'       => 'Forbidden: Origin not allowed.',
         'your_origin' => $request_origin
     ], JSON_UNESCAPED_UNICODE);
-    exit();
+    exit;
 }
 
+// 7. 输出 CORS 相关响应头
 header("Access-Control-Allow-Origin: {$request_origin}");
-header("Access-Control-Allow-Credentials: true");
-header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With, X-App-Secret");
+header('Access-Control-Allow-Credentials: true');
+header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
+header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With, X-App-Secret');
+header('Access-Control-Max-Age: 86400');
 
-// 对 OPTIONS 请求明确返回 200
+// 8. 对 OPTIONS 预检请求直接返回 200
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
-    exit();
+    exit;
 }
 
-// --- 您的API业务逻辑从这里开始 ---
+// --- API 业务逻辑：用户登录 ---
 
-// 引入数据库连接
-require_once '../db_connect.php';
 
-// 获取POST数据
-$data = json_decode(file_get_contents('php://input'), true);
-$username = $data['username'] ?? '';
-$password = $data['password'] ?? '';
+// 9. 引入数据库连接（请确保 db_connect.php 已配置好 PDO 连接 $pdo）
+require_once __DIR__ . '/../db_connect.php';
 
-if (empty($username) || empty($password)) {
-    echo json_encode(['success' => false, 'message' => '用户名和密码不能为空']);
-    exit();
+// 10. 读取并解析 JSON POST 数据
+$raw = file_get_contents('php://input');
+$data = json_decode($raw, true);
+
+// 11. 验证输入
+$username = trim($data['username'] ?? '');
+$password = trim($data['password'] ?? '');
+
+if ($username === '' || $password === '') {
+    echo json_encode([
+        'success' => false,
+        'message' => '用户名和密码不能为空'
+    ], JSON_UNESCAPED_UNICODE);
+    exit;
 }
 
 try {
-    // 查询用户
-    $stmt = $pdo->prepare("SELECT * FROM users WHERE username = ?");
+    // 12. 查询用户
+    $stmt = $pdo->prepare('SELECT id, username, password_hash, points FROM users WHERE username = ? LIMIT 1');
     $stmt->execute([$username]);
     $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
+    // 13. 校验密码
     if ($user && password_verify($password, $user['password_hash'])) {
         // 登录成功
         echo json_encode([
             'success' => true,
             'message' => '登录成功',
-            'user' => [
-                'id' => $user['id'],
+            'user'    => [
+                'id'       => $user['id'],
                 'username' => $user['username'],
-                'points' => $user['points']
+                'points'   => $user['points']
             ]
-        ]);
+        ], JSON_UNESCAPED_UNICODE);
     } else {
         // 登录失败
-        echo json_encode(['success' => false, 'message' => '用户名或密码错误']);
+        echo json_encode([
+            'success' => false,
+            'message' => '用户名或密码错误'
+        ], JSON_UNESCAPED_UNICODE);
     }
+
 } catch (PDOException $e) {
-    // 数据库错误
+    // 数据库异常
     http_response_code(500);
-    echo json_encode(['success' => false, 'message' => '数据库错误: ' . $e->getMessage()]);
+    echo json_encode([
+        'success' => false,
+        'message' => '数据库错误: ' . $e->getMessage()
+    ], JSON_UNESCAPED_UNICODE);
 }

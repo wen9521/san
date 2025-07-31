@@ -12,13 +12,20 @@ $allowed_origins = [
 
 // 检查请求的来源
 $request_origin = isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : '';
+
+// 打印实际接收的 Origin，便于调试
+error_log('Incoming Origin: ' . ($request_origin ?: 'empty'));
+
+// 加上 Vary 头，避免缓存误用
+header('Vary: Origin');
+
 $is_request_allowed = false;
 
 // 【第2步】: 安全校验逻辑
 // 规则：请求的来源必须在我们定义的白名单中
 if (in_array($request_origin, $allowed_origins)) {
     $is_request_allowed = true;
-} 
+}
 // 对 'null' Origin 的特殊处理
 elseif ($request_origin === 'null' || empty($request_origin)) {
     $is_request_allowed = true;
@@ -29,25 +36,23 @@ elseif ($request_origin === 'null' || empty($request_origin)) {
 // 【第3步】: 根据校验结果设置响应头
 if (!$is_request_allowed) {
     header("HTTP/1.1 403 Forbidden");
-    // 返回更详细的错误，方便调试
-    $error_details = [
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode([
         'error' => 'Forbidden: Origin not allowed.',
-        'your_origin' => isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : 'Not specified'
-    ];
-    header('Content-Type: application/json');
-    echo json_encode($error_details);
+        'your_origin' => $request_origin
+    ], JSON_UNESCAPED_UNICODE);
     exit();
 }
 
-// 请求合法，我们为其设置CORS响应头
-header("Access-Control-Allow-Origin: " . $request_origin);
+header("Access-Control-Allow-Origin: {$request_origin}");
 header("Access-Control-Allow-Credentials: true");
 header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With, X-App-Secret"); // 把X-App-Secret加回来以防万一
+header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With, X-App-Secret");
 
-// 处理CORS预检请求
-if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
-    exit(0);
+// 对 OPTIONS 请求明确返回 200
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(200);
+    exit();
 }
 
 // --- 您的API业务逻辑从这里开始 ---

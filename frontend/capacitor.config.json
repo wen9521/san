@@ -9,7 +9,7 @@
     "androidScheme": "https",
     "cleartext": true,
     "allowNavigation": [
-      "https://9525.ip-ddns.com"
+      "9525.ip-ddns.com"
     ]
   }
 }

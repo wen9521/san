@@ -1,18 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Box, Typography, Button, Paper, Grid } from '@mui/material';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import HandDisplay from '../components/HandDisplay';
 import { GameRow } from '../components/GameRow';
-import { useEightGame } from '../context/EightGameContext'; // Correct: Use the hook for Eight-Card Game
+import { useEightGame } from '../context/EightGameContext';
 import { validateEightArrangement, checkForSpecialHand } from '../utils/eightLogic';
 import SpecialHandDialog from '../components/SpecialHandDialog';
 
-const cardHeight = 112; // Standard card height in pixels
+const cardHeight = 112;
 
-/**
- * A specialized component to display a player's arranged hand with a compact, overlapping layout.
- */
 const PlayerDisplay = ({ player }) => {
   if (!player || !player.rows) {
     return <Paper sx={{ height: '100%', background: 'rgba(0,0,0,0.2)' }} />;
@@ -38,14 +35,13 @@ const PlayerDisplay = ({ player }) => {
         backdropFilter: 'blur(10px)',
         border: '1px solid rgba(255, 255, 255, 0.2)',
         color: 'white',
-        overflow: 'hidden', // Ensures no internal scrolling
+        overflow: 'hidden',
       }}
     >
       <Typography variant="h6" sx={{ p: 1, textAlign: 'center', background: 'rgba(0,0,0,0.2)', fontSize: '0.9rem' }}>
         {player.name}
       </Typography>
       <Box sx={{ flexGrow: 1, position: 'relative' }}>
-        {/* This container clips the bottom half of the last row */}
         <Box sx={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, overflow: 'hidden' }}>
           <OverlappedHand cards={front} top={0} zIndex={1} />
           <OverlappedHand cards={middle} top={cardHeight / 2 - 20} zIndex={2} />
@@ -56,35 +52,41 @@ const PlayerDisplay = ({ player }) => {
   );
 };
 
-
 const EightGamePage = () => {
-  // Correct: Destructure from useEightGame()
-  const { players, currentPlayer, arrangeAIRows, setPlayerArrangement, advanceToComparison } = useEightGame();
+  const { players, currentPlayer, setPlayerArrangement, advanceToComparison, comparisonResult, isGameActive } = useEightGame();
   
   const [rows, setRows] = useState({ front: [], middle: [], back: [] });
   const [isValid, setIsValid] = useState(false);
   const [specialHand, setSpecialHand] = useState(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [showComparison, setShowComparison] = useState(false);
 
   useEffect(() => {
-    if (currentPlayer) {
-        const detectedSpecialHand = checkForSpecialHand(currentPlayer.hand);
-        if (detectedSpecialHand) {
-          setSpecialHand(detectedSpecialHand);
-          setDialogOpen(true);
-        }
+    if (currentPlayer?.hand) {
+      const detectedSpecialHand = checkForSpecialHand(currentPlayer.hand);
+      if (detectedSpecialHand) {
+        setSpecialHand(detectedSpecialHand);
+        setDialogOpen(true);
+      }
     }
   }, [currentPlayer]);
 
+  // 【新增】监听所有玩家是否准备就绪
+  useEffect(() => {
+    if (isGameActive && players.length > 0 && players.every(p => p.isReady)) {
+        // 当所有玩家都准备好后，触发比牌逻辑
+        advanceToComparison();
+        setShowComparison(true);
+    }
+  }, [players, isGameActive, advanceToComparison]);
+
+
   const handleDrop = (card, targetRow) => {
     const newRows = { front: [...rows.front], middle: [...rows.middle], back: [...rows.back] };
-    
     Object.keys(newRows).forEach(rowName => {
       newRows[rowName] = newRows[rowName].filter(c => c.id !== card.id);
     });
-
     newRows[targetRow] = [...newRows[targetRow], card];
-
     setRows(newRows);
     const validation = validateEightArrangement(newRows);
     setIsValid(validation.isValid);
@@ -93,8 +95,8 @@ const EightGamePage = () => {
   const handleConfirm = () => {
     const validation = validateEightArrangement(rows);
     if (validation.isValid) {
-      setPlayerArrangement(currentPlayer.id, rows); // Use the correct function
-      // advanceToComparison might be called within setPlayerArrangement or needs to be called after all players confirm
+      // 核心改动：只设置当前玩家的牌型，并将其标记为准备就绪
+      setPlayerArrangement(currentPlayer.id, rows);
     } else {
       alert(validation.message);
     }
@@ -104,34 +106,34 @@ const EightGamePage = () => {
     setDialogOpen(false);
     if (useSpecial) {
       console.log(`${currentPlayer.name} uses special hand: ${specialHand.name}`);
-      // Handle special hand win logic here
     }
   };
 
-  // Comparison View: Check if all players have their rows set
-  if (players.every(p => p.rows && p.rows.front && p.rows.front.length > 0)) {
+  // 【视图更新】使用 showComparison 状态来决定是否显示比牌视图
+  if (showComparison) {
     return (
       <Box sx={{ width: '100vw', height: '100vh', p: 1, background: 'radial-gradient(circle, #2c4a3b 0%, #1a2a28 100%)', boxSizing: 'border-box' }}>
         <Grid container spacing={1} sx={{ height: '100%' }}>
-          {players.slice(0, 6).map(p => (
-            <Grid item xs={6} key={p.id} sx={{ height: '33.33%' }}>
+          {players.map(p => (
+            <Grid item xs={6} sm={4} md={2} key={p.id} sx={{ height: '33.33%' }}>
               <PlayerDisplay player={p} />
             </Grid>
           ))}
         </Grid>
+        {/* 这里可以加入一个 "再玩一局" 的按钮 */}
       </Box>
     );
   }
 
-  if (!currentPlayer) {
-      return <Typography>Loading...</Typography>
+  if (!currentPlayer || !isGameActive) {
+      return <Typography sx={{color: "white", p: 2}}>正在加载对局...</Typography>
   }
 
-  // Arrangement UI
+  // 默认显示理牌界面
   return (
     <DndProvider backend={HTML5Backend}>
       <Box sx={{ p: 2, background: '#222', minHeight: '100vh', color: 'white' }}>
-        <Typography variant="h4">{currentPlayer.name}'s Turn</Typography>
+        <Typography variant="h4">{currentPlayer.name}的理牌阶段</Typography>
         <HandDisplay cards={currentPlayer.hand} source="hand" />
         
         <Box sx={{ my: 3 }}>

@@ -4,34 +4,50 @@ import { Box, Typography, Button, Paper, CircularProgress } from '@mui/material'
 import { useGame } from '../context/GameContext';
 import '../styles/App.css'; 
 
-const MiniCard = ({ card, zIndex }) => (
+// A single, shared Card component for consistency
+const CardImage = ({ card, style }) => (
   <img 
     src={`/assets/cards/${card.id}.svg`} 
     alt={card.displayName}
     style={{
       width: '80px',
       height: 'auto',
-      position: 'absolute',
-      zIndex: zIndex,
       borderRadius: '4px',
       boxShadow: '0 1px 3px rgba(0,0,0,0.5)',
+      ...style,
     }}
   />
 );
 
+
+// Updated StackedHand component to visually stack cards
 const StackedHand = ({ cards }) => {
   if (!cards || cards.length === 0) return null;
+
+  const cardHeight = 112; // Approximate height based on 80px width and aspect ratio
+  const overlap = 20; // How much each card overlaps the previous one, in pixels
+  const containerHeight = cardHeight + (cards.length - 1) * overlap;
+
   return (
     <Box sx={{ 
       position: 'relative', 
       width: '80px',
-      height: '112px',
-      display: 'flex', 
-      alignItems: 'center', 
-      justifyContent: 'center' 
+      height: `${containerHeight}px`,
+      display: 'flex',
+      justifyContent: 'center', // Horizontally center the stack
+      alignItems: 'flex-start', // Align items to the top
+      mt: 2, // Add some margin-top for spacing
     }}>
       {cards.map((card, index) => (
-        <MiniCard key={card.id} card={card} zIndex={index} />
+         <CardImage 
+            key={card.id} 
+            card={card} 
+            style={{
+                position: 'absolute',
+                top: `${index * overlap}px`,
+                zIndex: index,
+            }}
+          />
       ))}
     </Box>
   );
@@ -39,10 +55,9 @@ const StackedHand = ({ cards }) => {
 
 const ComparisonPage = () => {
   const navigate = useNavigate();
-  const location = useLocation(); // 【新增】获取路由信息
+  const location = useLocation();
   const { players, resetGame } = useGame();
 
-  // 【已修改】优先从路由 state 获取比牌结果
   const comparisonResult = location.state?.results || null;
 
   useEffect(() => {
@@ -92,7 +107,7 @@ const ComparisonPage = () => {
         height: '100vh',
         width: '100vw',
         background: 'radial-gradient(circle, #2c4a3b 0%, #1a2a28 100%)',
-        overflow: 'hidden',
+        overflow: 'auto', // Changed to auto to allow scrolling if content overflows
         p: 2,
         boxSizing: 'border-box'
       }}
@@ -141,7 +156,7 @@ const ComparisonPage = () => {
         ))}
       </Box>
 
-      <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2, pb: 2 }}>
         <Button variant="contained" size="large" onClick={handleReturnHome}>
           重新开始
         </Button>

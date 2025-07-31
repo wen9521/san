@@ -1,5 +1,5 @@
+// [FORCE UPDATE] This comment is added to ensure deployment detects the latest version.
 import React, { createContext, useState, useContext, useCallback } from 'react';
-// 【已修复】导入了正确的函数名
 import { getAIThirteenBestArrangement, validateThirteenArrangement } from '../utils/thirteenLogic';
 import { dealAndShuffle } from '../utils/deal';
 import DutouDialog from '../components/DutouDialog';
@@ -8,14 +8,10 @@ const GameContext = createContext();
 
 export const useGame = () => useContext(GameContext);
 
-// 【已修复】这个计分逻辑应该属于Context，而不是外部导入
 const calculateAllScores = (players) => {
-    // ... (计分逻辑的具体实现)
-    // 这个函数非常复杂，暂时用一个placeholder代替
     console.log("Calculating scores for players:", players);
-    return { /* 模拟的计分结果 */ };
+    return { /* Placeholder result */ };
 };
-
 
 export const GameProvider = ({ children }) => {
     const [players, setPlayers] = useState([]);
@@ -29,7 +25,6 @@ export const GameProvider = ({ children }) => {
 
     const setupGame = useCallback((playerHand, ai1Hand, ai2Hand, ai3Hand, offlineMode = false) => {
         const initialPlayers = [
-            // 【已修复】调用正确的函数
             { id: 'player', name: '你', hand: playerHand, rows: getAIThirteenBestArrangement(playerHand), isReady: offlineMode },
             { id: 'ai1', name: '小明', hand: ai1Hand, rows: getAIThirteenBestArrangement(ai1Hand), isReady: true },
             { id: 'ai2', name: '小红', hand: ai2Hand, rows: getAIThirteenBestArrangement(ai2Hand), isReady: true },
@@ -79,7 +74,6 @@ export const GameProvider = ({ children }) => {
         setPlayers(prev => {
             const player = prev.find(p => p.id === 'player');
             if (player) {
-                // 【已修复】调用正确的函数
                 const bestRows = getAIThirteenBestArrangement(player.hand);
                 const isPlayerReady = isOfflineMode;
                 return prev.map(p => p.id === 'player' ? { ...p, rows: bestRows, isReady: isPlayerReady } : p);
@@ -94,7 +88,6 @@ export const GameProvider = ({ children }) => {
         const player = players.find(p => p.id === 'player');
         if (player && !player.isReady) {
             if (isOfflineMode) {
-                 // 【已修复】调用正确的函数
                 const bestRows = getAIThirteenBestArrangement(player.hand);
                 finalPlayers = players.map(p => p.id === 'player' ? { ...p, rows: bestRows, isReady: true } : p);
             } else {

@@ -18,6 +18,9 @@ const AIResultRow = ({ name, cards, typeName, result }) => {
         resultText = '平';
     }
 
+    // 修复：过滤无效card
+    const validCards = Array.isArray(cards) ? cards.filter(card => card && card.id) : [];
+
     return (
         <Box className="game-row" sx={{ borderColor: result !== null ? resultColor + '.main' : 'rgba(255, 255, 255, 0.3)' }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -27,7 +30,7 @@ const AIResultRow = ({ name, cards, typeName, result }) => {
                 {resultText && <Chip label={resultText} color={resultColor} sx={{ fontWeight: 'bold' }} />}
             </Box>
             <Box className="game-row-content" sx={{ mt: 1 }}>
-                {cards.map((card, i) => (
+                {validCards.map((card, i) => (
                     <PokerCard key={card.id} cardData={card} index={i} />
                 ))}
             </Box>

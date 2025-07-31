@@ -11,7 +11,7 @@ const Row = ({ name, cards, onRowClick, typeName, onCardReturn }) => (
     </Typography>
     <Box className="game-row-content">
       {cards.length > 0 ? (
-        cards.map((card, i) => (
+        cards.filter(card => card && card.id).map((card, i) => (
           // 为PokerCard添加 onClick 事件
           <PokerCard 
             key={card.id} 

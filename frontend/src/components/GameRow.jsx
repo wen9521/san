@@ -27,7 +27,8 @@ export const GameRow = ({ id, cards, label, onRowClick, selectedCardIds, onCardC
 
             if (totalCardsWidth <= availableWidth) {
                 setOverlap(5);
-            } else {
+            }
+            else {
                 const requiredOverlap = (totalCardsWidth - availableWidth) / (numCards - 1);
                 setOverlap(Math.max(20, requiredOverlap));
             }
@@ -46,6 +47,9 @@ export const GameRow = ({ id, cards, label, onRowClick, selectedCardIds, onCardC
         };
     }, [cards.length, CARD_WIDTH]);
 
+    // 修正：过滤掉无效card（防止 undefined 报错）
+    const validCards = Array.isArray(cards) ? cards.filter(card => card && card.id) : [];
+
     return (
         <Box 
             sx={{
@@ -62,7 +66,6 @@ export const GameRow = ({ id, cards, label, onRowClick, selectedCardIds, onCardC
                     background: 'rgba(0, 255, 0, 0.15)',
                 },
                 position: 'relative',
-                // overflow: 'hidden' // 移除此行以允许牌向上溢出
             }}
             onClick={() => onRowClick(id)}
         >
@@ -77,7 +80,7 @@ export const GameRow = ({ id, cards, label, onRowClick, selectedCardIds, onCardC
                     height: `${CARD_HEIGHT}px`,
                 }}
             >
-                {cards.map((card, index) => {
+                {validCards.map((card, index) => {
                     const isSelected = selectedCardIds?.includes(card.id);
                     return (
                         <Box 
@@ -85,7 +88,7 @@ export const GameRow = ({ id, cards, label, onRowClick, selectedCardIds, onCardC
                             sx={{
                                 position: 'absolute',
                                 left: `${index * (CARD_WIDTH - overlap)}px`,
-                                zIndex: isSelected ? 1000 : 10 + index, // 大幅提高选中牌的 z-index
+                                zIndex: isSelected ? 1000 : 10 + index,
                                 transition: 'left 0.3s ease, transform 0.2s ease, z-index 0s',
                                 transform: isSelected ? `translateY(-${SELECTED_LIFT}px)` : 'none',
                             }}
@@ -116,7 +119,7 @@ export const GameRow = ({ id, cards, label, onRowClick, selectedCardIds, onCardC
                 flexDirection: 'column', 
                 alignItems: 'center',
                 justifyContent: 'center',
-                zIndex: 1, // 确保标签在牌的下方
+                zIndex: 1,
             }}>
                 <Typography variant="h6" sx={{ mb: 0, fontSize: '1.2rem', fontWeight: 'bold' }}>
                     {label}

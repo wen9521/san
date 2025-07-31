@@ -10,7 +10,7 @@ const HandDisplay = ({ hand }) => {
 
   return (
     <div className="hand-display">
-      {hand.map((card, index) => (
+      {hand.filter(card => card && card.id).map((card, index) => (
         <PokerCard key={card.id} cardData={card} index={index} />
       ))}
     </div>

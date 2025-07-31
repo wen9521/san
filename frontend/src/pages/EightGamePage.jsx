@@ -3,8 +3,8 @@ import { Box, Typography, Button, Paper, Grid } from '@mui/material';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import HandDisplay from '../components/HandDisplay';
-import { GameRow } from '../components/GameRow'; // Corrected import
-import { useGame } from '../context/GameContext';
+import { GameRow } from '../components/GameRow';
+import { useEightGame } from '../context/EightGameContext'; // Correct: Use the hook for Eight-Card Game
 import { validateEightArrangement, checkForSpecialHand } from '../utils/eightLogic';
 import SpecialHandDialog from '../components/SpecialHandDialog';
 
@@ -58,19 +58,23 @@ const PlayerDisplay = ({ player }) => {
 
 
 const EightGamePage = () => {
-  const { players, player, setPlayerRows, goToNextStage } = useGame();
+  // Correct: Destructure from useEightGame()
+  const { players, currentPlayer, arrangeAIRows, setPlayerArrangement, advanceToComparison } = useEightGame();
+  
   const [rows, setRows] = useState({ front: [], middle: [], back: [] });
   const [isValid, setIsValid] = useState(false);
   const [specialHand, setSpecialHand] = useState(null);
   const [dialogOpen, setDialogOpen] = useState(false);
 
   useEffect(() => {
-    const detectedSpecialHand = checkForSpecialHand(player.hand);
-    if (detectedSpecialHand) {
-      setSpecialHand(detectedSpecialHand);
-      setDialogOpen(true);
+    if (currentPlayer) {
+        const detectedSpecialHand = checkForSpecialHand(currentPlayer.hand);
+        if (detectedSpecialHand) {
+          setSpecialHand(detectedSpecialHand);
+          setDialogOpen(true);
+        }
     }
-  }, [player.hand]);
+  }, [currentPlayer]);
 
   const handleDrop = (card, targetRow) => {
     const newRows = { front: [...rows.front], middle: [...rows.middle], back: [...rows.back] };
@@ -89,8 +93,8 @@ const EightGamePage = () => {
   const handleConfirm = () => {
     const validation = validateEightArrangement(rows);
     if (validation.isValid) {
-      setPlayerRows(player.id, rows);
-      goToNextStage();
+      setPlayerArrangement(currentPlayer.id, rows); // Use the correct function
+      // advanceToComparison might be called within setPlayerArrangement or needs to be called after all players confirm
     } else {
       alert(validation.message);
     }
@@ -99,10 +103,12 @@ const EightGamePage = () => {
   const handleSpecialHandDecision = (useSpecial) => {
     setDialogOpen(false);
     if (useSpecial) {
-      console.log(`${player.name} uses special hand: ${specialHand.name}`);
+      console.log(`${currentPlayer.name} uses special hand: ${specialHand.name}`);
+      // Handle special hand win logic here
     }
   };
 
+  // Comparison View: Check if all players have their rows set
   if (players.every(p => p.rows && p.rows.front && p.rows.front.length > 0)) {
     return (
       <Box sx={{ width: '100vw', height: '100vh', p: 1, background: 'radial-gradient(circle, #2c4a3b 0%, #1a2a28 100%)', boxSizing: 'border-box' }}>
@@ -117,12 +123,16 @@ const EightGamePage = () => {
     );
   }
 
+  if (!currentPlayer) {
+      return <Typography>Loading...</Typography>
+  }
+
   // Arrangement UI
   return (
     <DndProvider backend={HTML5Backend}>
       <Box sx={{ p: 2, background: '#222', minHeight: '100vh', color: 'white' }}>
-        <Typography variant="h4">{player.name}'s Turn</Typography>
-        <HandDisplay cards={player.hand} source="hand" />
+        <Typography variant="h4">{currentPlayer.name}'s Turn</Typography>
+        <HandDisplay cards={currentPlayer.hand} source="hand" />
         
         <Box sx={{ my: 3 }}>
           <GameRow name="后道 (3)" cards={rows.back} onDrop={(card) => handleDrop(card, 'back')} />

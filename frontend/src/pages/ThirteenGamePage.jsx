@@ -26,9 +26,10 @@ function ThirteenGamePage() {
         if (location.state?.mode === 'offline') {
             startOfflineGame();
         }
-        return () => {
-            resetGame();
-        };
+        // 【已移除】不再在此处重置游戏
+        // return () => {
+        //     resetGame();
+        // };
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 

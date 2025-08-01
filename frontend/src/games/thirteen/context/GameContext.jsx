@@ -71,7 +71,7 @@ export const GameProvider = ({ children }) => {
 
     const autoArrangePlayerHand = () => {
         const player = players.find(p => p.id === 'player');
-        if (!player) return;
+        if (!player || !player.hand) return;
         const bestRows = findBestCombination(player.hand);
         setPlayerArrangement('player', bestRows);
     };

@@ -142,7 +142,7 @@ export const getAIEightGameBestArrangement = (fullHand) => {
                     maxScore = totalScore;
                     bestArrangement = currentArrangement;
                 } else if (totalScore === maxScore && bestArrangement) {
-                    // If scores are equal, prioritize arrangements with higher-ranked hands in later rows (middle then back)
+                    // If scores are equal,优先后道/中道更大
                     const currentMiddleEval = evaluateEightGameHand(currentMiddle);
                     const bestMiddleEval = evaluateEightGameHand(bestArrangement.middle);
                     if (compareEightGameHands(currentMiddleEval, bestMiddleEval) > 0) {

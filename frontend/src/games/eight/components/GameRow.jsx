@@ -5,26 +5,22 @@ import { PokerCard } from './PokerCard';
 export const GameRow = ({ id, cards, label, onRowClick, selectedCardIds, onCardClick, typeName }) => {
     const CARD_WIDTH = 80;
     const CARD_HEIGHT = 112;
-    const SELECTED_LIFT = 20; // 定义一个常量表示选中时向上移动的距离
+    const SELECTED_LIFT = 20;
     const containerRef = useRef(null);
     const [overlap, setOverlap] = useState(40);
 
     useLayoutEffect(() => {
         const calculateOverlap = () => {
             if (!containerRef.current) return;
-
             const containerWidth = containerRef.current.offsetWidth;
             const numCards = cards.length;
             const reservedSpace = CARD_WIDTH / 1.5;
             const availableWidth = containerWidth - reservedSpace;
-
             if (numCards <= 1) {
                 setOverlap(0);
                 return;
             }
-            
             const totalCardsWidth = numCards * CARD_WIDTH;
-
             if (totalCardsWidth <= availableWidth) {
                 setOverlap(5);
             }
@@ -48,18 +44,18 @@ export const GameRow = ({ id, cards, label, onRowClick, selectedCardIds, onCardC
     }, [cards.length, CARD_WIDTH]);
 
     // 修正：过滤掉无效card（防止 undefined 报错）
-    const validCards = Array.isArray(cards) ? cards.filter(card => card && card.id) : [];
+    const validCards = Array.isArray(cards) ? cards.filter(card => card && card.id && card.rank) : [];
 
     return (
         <Box 
             sx={{
                 background: 'rgba(255, 255, 255, 0.1)',
                 borderRadius: '12px',
-                minHeight: `${CARD_HEIGHT + 20 + SELECTED_LIFT}px`, // 增加高度以容纳弹出的牌
+                minHeight: `${CARD_HEIGHT + 20 + SELECTED_LIFT}px`,
                 display: 'flex',
                 alignItems: 'center',
                 padding: `10px 15px`,
-                paddingTop: `${SELECTED_LIFT + 10}px`, // 增加顶部内边距
+                paddingTop: `${SELECTED_LIFT + 10}px`,
                 cursor: 'pointer',
                 transition: 'background-color 0.2s ease',
                 '&:hover': {
@@ -102,7 +98,7 @@ export const GameRow = ({ id, cards, label, onRowClick, selectedCardIds, onCardC
                             />
                         </Box>
                     );
-                })}
+                })}。
             </Box>
 
             {/* Label on the right */}

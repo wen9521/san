@@ -1,5 +1,5 @@
 import React from 'react';
-import { PokerCard } from './PokerCard'; // Assuming PokerCard is in the same directory
+import { PokerCard } from './PokerCard';
 import '../../../styles/App.css';
 
 // 【已修复】确保所有父组件都传入 onCardClick 函数
@@ -8,8 +8,8 @@ const HandDisplay = ({ hand, onCardClick, selectedCard }) => {
     return null;
   }
 
-  // 确保过滤掉无效的卡牌数据
-  const validCards = hand.filter(card => card && card.id);
+  // 修正：过滤掉无效的卡牌数据
+  const validCards = hand.filter(card => card && card.id && card.rank);
 
   return (
     <div className="hand-display">
@@ -19,11 +19,9 @@ const HandDisplay = ({ hand, onCardClick, selectedCard }) => {
         return (
           <PokerCard 
             key={card.id} 
-            // 【核心修复】将属性名从 cardData 改为 card
             card={card} 
             index={index}
             isSelected={isSelected}
-            // 传递从父组件接收的点击事件处理器
             onClick={onCardClick ? () => onCardClick(card) : undefined}
           />
         );

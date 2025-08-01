@@ -37,6 +37,7 @@ const PointsDialog = ({ open, onClose }) => {
     setGiveTip(res.message || (res.success ? '赠送成功' : '赠送失败'));
   };
 
+  // 修复：onChange 事件应正确设置手机号（允许输入数字且首位为1，共11位）
   return (
     <Dialog open={open} onClose={onClose} fullWidth>
       <DialogTitle>积分管理</DialogTitle>
@@ -49,8 +50,13 @@ const PointsDialog = ({ open, onClose }) => {
             <TextField
               label="手机号"
               value={searchPhone}
-              onChange={e => setSearchPhone(e.target.value.replace(/[^d]/g, ''))}
-              inputProps={{ maxLength: 11 }}
+              onChange={e => {
+                // 允许输入数字，首位必须是1，最多11位
+                let val = e.target.value.replace(/D/g, '').slice(0, 11);
+                if (val.length > 0 && val[0] !== '1') val = '1' + val.slice(1);
+                setSearchPhone(val);
+              }}
+              inputProps={{ maxLength: 11, inputMode: 'numeric', pattern: '[0-9]*' }}
               size="small"
             />
             <Button variant="contained" onClick={handleSearch}>查询</Button>
@@ -67,15 +73,20 @@ const PointsDialog = ({ open, onClose }) => {
           <TextField
             label="对方手机号"
             value={givePhone}
-            onChange={e => setGivePhone(e.target.value.replace(/[^d]/g, ''))}
-            inputProps={{ maxLength: 11 }}
+            onChange={e => {
+              let val = e.target.value.replace(/D/g, '').slice(0, 11);
+              if (val.length > 0 && val[0] !== '1') val = '1' + val.slice(1);
+              setGivePhone(val);
+            }}
+            inputProps={{ maxLength: 11, inputMode: 'numeric', pattern: '[0-9]*' }}
             fullWidth
             margin="dense"
           />
           <TextField
             label="赠送积分"
             value={giveAmount}
-            onChange={e => setGiveAmount(e.target.value.replace(/[^d]/g, ''))}
+            onChange={e => setGiveAmount(e.target.value.replace(/D/g, ''))}
+            inputProps={{ inputMode: 'numeric', pattern: '[0-9]*' }}
             fullWidth
             margin="dense"
           />

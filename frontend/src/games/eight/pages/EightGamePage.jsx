@@ -3,6 +3,7 @@ import { Box, Typography, Button, Stack, CircularProgress } from '@mui/material'
 import { useNavigate } from 'react-router-dom';
 import PlayerStatus from '../components/PlayerStatus';
 import { GameRow } from '../components/GameRow';
+import HandDisplay from '../components/HandDisplay';
 import SpecialHandDialog from '../components/SpecialHandDialog';
 import { useEightGame } from '../context/EightGameContext';
 import { sortEightGameCardsByRank, checkForEightGameSpecialHand, evaluateEightGameHand, getHandTypeName } from '../utils/eightLogic';
@@ -92,7 +93,9 @@ function EightGamePage() {
                                 <Typography align="center" sx={{ color: scoreObj.totalScore > 0 ? '#66bb6a' : (scoreObj.totalScore < 0 ? '#ef5350' : 'white'), fontWeight: 'bold' }}>
                                     {scoreObj.totalScore > 0 ? `+${scoreObj.totalScore}` : scoreObj.totalScore}
                                 </Typography>
-                                {/* Here we assume rows are populated for comparison */}
+                                <HandDisplay hand={p.rows.front || []} />
+                                <HandDisplay hand={p.rows.middle || []} />
+                                <HandDisplay hand={p.rows.back || []} />
                             </Box>
                         );
                     })}

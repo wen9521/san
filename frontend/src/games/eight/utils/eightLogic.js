@@ -1,12 +1,7 @@
-/**
- * =================================================================================
- * 八张游戏核心逻辑 (8-Card Poker Logic) - V8 (Ultra-Robust AI Fallback)
- * =================================================================================
- */
 
 export const EIGHT_GAME_RANKS = ['2', '3', '4', '5', '6', '7', '8', '9', 'T', 'J', 'Q', 'K', 'A'];
 export const EIGHT_GAME_SUITS = { 'S': 4, 'H': 3, 'C': 2, 'D': 1 };
-export const EIGHT_GAME_HAND_TYPES = { STRAIGHT_FLUSH: 4, THREE_OF_A_KIND: 3, STRAIGHT: 2, PAIR: 1, HIGH_CARD: 0 };
+export const EIGHT_GAME_HAND_TYPES = { STRAIGHT_FLUSH: 5, THREE_OF_A_KIND: 4, STRAIGHT: 3, PAIR: 2, HIGH_CARD: 1 };
 export const EIGHT_GAME_SPECIAL_HAND_TYPES = { FOUR_OF_A_KIND: { score: 8, name: '四条' }, FOUR_PAIRS: { score: 8, name: '四对' } };
 
 const getRankValue = (card) => EIGHT_GAME_RANKS.indexOf(card.rank);
@@ -32,7 +27,6 @@ export const getHandTypeName = (evaluation) => {
     return typeMap[evaluation.type] || '未知';
 };
 
-
 export const evaluateEightGameHand = (hand) => {
     if (!hand || hand.length === 0) return { type: EIGHT_GAME_HAND_TYPES.HIGH_CARD, highCards: [], hand: [] };
     const sortedHand = sortEightGameCardsByRank(hand);
@@ -43,19 +37,38 @@ export const evaluateEightGameHand = (hand) => {
     const rankCounts = ranks.reduce((acc, rank) => { acc[rank] = (acc[rank] || 0) + 1; return acc; }, {});
     const counts = Object.values(rankCounts).sort((a, b) => b - a);
     const isFlush = new Set(suits).size === 1;
-    const isWheel = JSON.stringify(ranks) === JSON.stringify([12, 2, 1]);
-    const isNormalStraight = new Set(ranks).size === ranks.length && ranks[0] - ranks[ranks.length - 1] === ranks.length - 1;
-    const isStraight = isNormalStraight || (hand.length === 3 && isWheel);
-    if (isWheel) highCards = [2, 1, 12];
-    if (isStraight && isFlush) return { type: EIGHT_GAME_HAND_TYPES.STRAIGHT_FLUSH, highCards, hand, maxSuit };
+    
+    // 修正：正确的A23牌组为 'A', '2', '3'，对应ranks [12, 1, 0]
+    const isWheel = hand.length === 3 && JSON.stringify(ranks) === JSON.stringify([12, 1, 0]);
+    const isNormalStraight = hand.length === 3 && new Set(ranks).size === 3 && ranks[0] - ranks[2] === 2;
+    const isStraight = isNormalStraight || isWheel;
+
+    let straightRank = 0;
+    if (isStraight) {
+        if (ranks[0] === 12 && ranks[1] === 11) { // AKQ
+            straightRank = 13; 
+        } else if (isWheel) { // A23
+            straightRank = 12;
+        } else {
+            straightRank = ranks[0]; // K Q J -> 11
+        }
+    }
+    
+    if (isStraight && isFlush) return { type: EIGHT_GAME_HAND_TYPES.STRAIGHT_FLUSH, highCards, hand, maxSuit, straightRank };
     if (counts[0] === 3) return { type: EIGHT_GAME_HAND_TYPES.THREE_OF_A_KIND, highCards, hand, maxSuit };
-    if (isStraight) return { type: EIGHT_GAME_HAND_TYPES.STRAIGHT, highCards, hand, maxSuit };
+    if (isStraight) return { type: EIGHT_GAME_HAND_TYPES.STRAIGHT, highCards, hand, maxSuit, straightRank };
     if (counts[0] === 2) return { type: EIGHT_GAME_HAND_TYPES.PAIR, highCards, hand, maxSuit };
     return { type: EIGHT_GAME_HAND_TYPES.HIGH_CARD, highCards, hand, maxSuit };
 };
 
 export const compareEightGameHands = (handA, handB) => {
     if (handA.type !== handB.type) return handA.type - handB.type;
+    // 修正：优先使用 straightRank 比较顺子
+    if (handA.type === EIGHT_GAME_HAND_TYPES.STRAIGHT || handA.type === EIGHT_GAME_HAND_TYPES.STRAIGHT_FLUSH) {
+        if (handA.straightRank !== handB.straightRank) {
+            return handA.straightRank - handB.straightRank;
+        }
+    }
     for (let i = 0; i < handA.highCards.length; i++) {
         if (handA.highCards[i] !== handB.highCards[i]) return handA.highCards[i] - handB.highCards[i];
     }
@@ -63,11 +76,12 @@ export const compareEightGameHands = (handA, handB) => {
 };
 
 export const validateEightGameArrangement = (rows) => {
-    if (!rows || !rows.front || !rows.middle || !rows.back || rows.front.length !== 2 || rows.middle.length !== 3 || rows.back.length !== 3) return { isValid: false };
+    if (!rows || !rows.front || !rows.middle || !rows.back || rows.front.length !== 2 || rows.middle.length !== 3 || rows.back.length !== 3) return { isValid: false, message: '牌墩数量不正确' };
     const frontHand = evaluateEightGameHand(rows.front);
     const middleHand = evaluateEightGameHand(rows.middle);
     const backHand = evaluateEightGameHand(rows.back);
-    if (compareEightGameHands(frontHand, middleHand) > 0 || compareEightGameHands(middleHand, backHand) > 0) return { isValid: false };
+    if (compareEightGameHands(frontHand, middleHand) > 0) return { isValid: false, message: '头道大于中道' };
+    if (compareEightGameHands(middleHand, backHand) > 0) return { isValid: false, message: '中道大于尾道' };
     return { isValid: true };
 };
 
@@ -98,7 +112,7 @@ export const checkForEightGameSpecialHand = (fullHand) => {
     const rankCounts = ranks.reduce((acc, rank) => { acc[rank] = (acc[rank] || 0) + 1; return acc; }, {});
     const counts = Object.values(rankCounts);
     if (counts.includes(4)) return EIGHT_GAME_SPECIAL_HAND_TYPES.FOUR_OF_A_KIND;
-    if (counts.length === 4 && counts.every(c => c === 2)) return EIGHT_GAME_SPECIAL_HAND_TYPES.FOUR_PAIRS;
+    if (counts.filter(c => c === 2).length === 4) return EIGHT_GAME_SPECIAL_HAND_TYPES.FOUR_PAIRS;
     return null;
 };
 
@@ -112,23 +126,31 @@ const combinations = (array, k) => {
 export const getAIEightGameBestArrangement = (fullHand) => {
     if (!fullHand || fullHand.length !== 8) return { front: [], middle: [], back: [] };
     const allFrontHands = combinations(fullHand, 2);
+    let bestArrangement = null;
+    let maxScore = -Infinity;
+
     for (const currentFront of allFrontHands) {
         const remaining6 = fullHand.filter(card => !currentFront.some(fc => fc.id === card.id));
         const allMiddleHands = combinations(remaining6, 3);
         for (const currentMiddle of allMiddleHands) {
             const currentBack = remaining6.filter(card => !currentMiddle.some(mc => mc.id === card.id));
-            if (validateEightGameArrangement({ front: currentFront, middle: currentMiddle, back: currentBack }).isValid) {
-                return { front: currentFront, middle: currentMiddle, back: currentBack };
+            const currentArrangement = { front: currentFront, middle: currentMiddle, back: currentBack };
+            if (validateEightGameArrangement(currentArrangement).isValid) {
+                const frontScore = evaluateEightGameHand(currentFront).type;
+                const middleScore = evaluateEightGameHand(currentMiddle).type;
+                const backScore = evaluateEightGameHand(currentBack).type;
+                const totalScore = frontScore + middleScore + backScore;
+                if (totalScore > maxScore) {
+                    maxScore = totalScore;
+                    bestArrangement = currentArrangement;
+                }
             }
         }
     }
     
-    //【已修复】提供一个绝对安全的后备方案
+    if (bestArrangement) return bestArrangement;
+
     console.warn("AI Warning: No valid 8-card arrangement found. Providing default sorted layout.");
     const sortedHand = sortEightGameCardsByRank(fullHand);
-    return {
-        front: sortedHand.slice(6, 8),
-        middle: sortedHand.slice(3, 6),
-        back: sortedHand.slice(0, 3)
-    };
+    return { front: sortedHand.slice(6, 8), middle: sortedHand.slice(3, 6), back: sortedHand.slice(0, 3) };
 };

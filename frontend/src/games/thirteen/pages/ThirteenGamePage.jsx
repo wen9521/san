@@ -1,22 +1,33 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Box, Typography, Button, CircularProgress, Stack } from '@mui/material';
 import { useGame } from '../context/GameContext';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import PlayerStatus from '../components/PlayerStatus';
 import { GameRow } from '../components/GameRow';
-import HandDisplay from '../components/HandDisplay';
+import { evaluateThirteenGameHand, getHandTypeName } from '../utils/thirteenLogic';
 
 function ThirteenGamePage() {
-    const { players, startGame, setPlayerArrangement } = useGame();
+    const { players, startGame, setPlayerArrangement, autoArrangePlayerHand } = useGame();
+    const navigate = useNavigate();
     const player = players.find(p => p.id === 'player');
     const myId = 'player';
     const [selectedCardIds, setSelectedCardIds] = useState([]);
+    const [handTypes, setHandTypes] = useState({ front: '', middle: '', back: '' });
+
+    useEffect(() => {
+        if (player && player.rows) {
+            setHandTypes({
+                front: getHandTypeName(evaluateThirteenGameHand(player.rows.front)),
+                middle: getHandTypeName(evaluateThirteenGameHand(player.rows.middle)),
+                back: getHandTypeName(evaluateThirteenGameHand(player.rows.back)),
+            });
+        }
+    }, [player]);
 
     if (!player) {
-        return <Box><CircularProgress /><Typography>正在创建十三张牌局...</Typography></Box>;
+        return <Box className="page-container-new-ui" sx={{justifyContent: 'center', alignItems: 'center'}}><CircularProgress /><Typography sx={{color: 'white', mt: 2}}>正在创建十三张牌局...</Typography></Box>;
     }
 
-    // 牌点击和分区分配
     const handleCardClick = (cardId) => {
         setSelectedCardIds(prev =>
             prev.includes(cardId) ? prev.filter(id => id !== cardId) : [...prev, cardId]
@@ -25,77 +36,76 @@ function ThirteenGamePage() {
 
     const handleRowClick = (targetRowId) => {
         if (selectedCardIds.length === 0 || !player) return;
-        const { rows, hand } = player;
-        let newRows = JSON.parse(JSON.stringify(rows));
-        let allPlayerCards = [
-            ...hand,
-            ...newRows.front,
-            ...newRows.middle,
-            ...newRows.back
-        ];
-        let movedCards = [];
-        selectedCardIds.forEach(cardId => {
-            let foundCard = allPlayerCards.find(c => c.id === cardId);
-            if (foundCard) movedCards.push(foundCard);
-        });
-        // 移除所有分区已存在的牌
-        movedCards.forEach(cardToMove => {
-            for (let row in newRows) {
-                newRows[row] = newRows[row].filter(c => c.id !== cardToMove.id);
-            }
-        });
-        // 放入目标分区
-        newRows[targetRowId] = [...newRows[targetRowId], ...movedCards];
+        
+        let newRows = JSON.parse(JSON.stringify(player.rows));
+        const allCardsInRows = [...newRows.front, ...newRows.middle, ...newRows.back];
+        
+        const movedCards = allCardsInRows.filter(c => selectedCardIds.includes(c.id));
+        
+        // Remove moved cards from their original rows
+        for (let row in newRows) {
+            newRows[row] = newRows[row].filter(c => !selectedCardIds.includes(c.id));
+        }
+
+        // Add moved cards to the target row
+        newRows[targetRowId].push(...movedCards);
+        
         setPlayerArrangement(myId, newRows);
         setSelectedCardIds([]);
     };
 
-    const { rows, hand } = player;
+    const handleAutoArrange = () => {
+        if (!player) return;
+        autoArrangePlayerHand();
+        setSelectedCardIds([]);
+    };
+
+    const { rows } = player;
     return (
         <Box className="page-container-new-ui">
             <Box className="game-board glass-effect">
                 <PlayerStatus players={players} myId={myId} />
-                <HandDisplay
-                    hand={hand.filter(card =>
-                        !rows.front.includes(card) &&
-                        !rows.middle.includes(card) &&
-                        !rows.back.includes(card)
-                    )}
-                    onCardClick={handleCardClick}
-                    selectedCardIds={selectedCardIds}
-                />
                 <Stack spacing={2} sx={{ flexGrow: 1, justifyContent: 'center' }}>
                     <GameRow
                         id="front"
-                        label="头道 (3)"
+                        label="头道"
                         cards={rows.front}
                         onCardClick={handleCardClick}
                         onRowClick={handleRowClick}
                         selectedCardIds={selectedCardIds}
+                        typeName={handTypes.front}
                     />
                     <GameRow
                         id="middle"
-                        label="中道 (5)"
+                        label="中道"
                         cards={rows.middle}
                         onCardClick={handleCardClick}
                         onRowClick={handleRowClick}
                         selectedCardIds={selectedCardIds}
+                        typeName={handTypes.middle}
                     />
                     <GameRow
                         id="back"
-                        label="尾道 (5)"
+                        label="尾道"
                         cards={rows.back}
                         onCardClick={handleCardClick}
                         onRowClick={handleRowClick}
                         selectedCardIds={selectedCardIds}
+                        typeName={handTypes.back}
                     />
                 </Stack>
-                <Stack direction="row" spacing={2} justifyContent="center" sx={{ p: 2 }}>
-                    <Button variant="contained" color="primary" component={Link} to="/thirteen/comparison">
+                <Stack direction="row" spacing={1} justifyContent="center" sx={{ p: 1, flexWrap: 'wrap' }}>
+                    <Button variant="contained" color="secondary" onClick={handleAutoArrange} sx={{ mb: 1 }}>
+                        智能分牌
+                    </Button>
+                    <Button variant="contained" color="primary" component={Link} to="/thirteen/comparison" sx={{ mb: 1 }}>
                         开始比牌
                     </Button>
-                    <Button variant="contained" color="success" onClick={startGame}>
+                    <Button variant="contained" color="success" onClick={startGame} sx={{ mb: 1 }}>
                         重新开始
+                    </Button>
+                    <Button variant="outlined" color="warning" onClick={() => navigate('/')} sx={{ mb: 1 }}>
+                        返回大厅
                     </Button>
                 </Stack>
             </Box>

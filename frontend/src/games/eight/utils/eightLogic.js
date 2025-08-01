@@ -20,6 +20,18 @@ export const sortEightGameCardsByRank = (cards) => {
     });
 };
 
+export const getHandTypeName = (evaluation) => {
+    if (!evaluation || typeof evaluation.type === 'undefined') return '未知';
+    const typeMap = {
+        [EIGHT_GAME_HAND_TYPES.STRAIGHT_FLUSH]: '同花顺',
+        [EIGHT_GAME_HAND_TYPES.THREE_OF_A_KIND]: '三条',
+        [EIGHT_GAME_HAND_TYPES.STRAIGHT]: '顺子',
+        [EIGHT_GAME_HAND_TYPES.PAIR]: '对子',
+        [EIGHT_GAME_HAND_TYPES.HIGH_CARD]: '高牌'
+    };
+    return typeMap[evaluation.type] || '未知';
+};
+
 
 export const evaluateEightGameHand = (hand) => {
     if (!hand || hand.length === 0) return { type: EIGHT_GAME_HAND_TYPES.HIGH_CARD, highCards: [], hand: [] };

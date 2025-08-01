@@ -1,7 +1,6 @@
 import React, { createContext, useState, useContext, useCallback, useEffect } from 'react';
 import { getAIThirteenGameBestArrangement, sortThirteenGameCardsByRank } from '../utils/thirteenLogic.js';
 
-// --- 修正发牌ID格式 ---
 const SUIT_NAMES = { S: 'spades', H: 'hearts', C: 'clubs', D: 'diamonds' };
 const RANK_NAMES = {
     'A': 'ace', 'K': 'king', 'Q': 'queen', 'J': 'jack',
@@ -34,10 +33,29 @@ export const GameProvider = ({ children }) => {
     const [comparisonResult, setComparisonResult] = useState(null);
 
     const startGame = useCallback(() => {
-        const [playerHand, aiHand] = dealCards();
+        const [playerHandRaw, aiHand] = dealCards();
+        const playerHand = sortThirteenGameCardsByRank(playerHandRaw);
+        
         setPlayers([
-            { id: 'player', name: '你', hand: sortThirteenGameCardsByRank(playerHand), rows: { front: [], middle: [], back: [] }, isReady: false },
-            { id: 'ai', name: '电脑', hand: sortThirteenGameCardsByRank(aiHand), rows: getAIThirteenGameBestArrangement(aiHand), isReady: true }
+            { 
+                id: 'player', 
+                name: '你', 
+                hand: playerHand, 
+                // 直接将牌按 3-5-5 分配到牌道
+                rows: { 
+                    front: playerHand.slice(0, 3), 
+                    middle: playerHand.slice(3, 8), 
+                    back: playerHand.slice(8, 13) 
+                }, 
+                isReady: false 
+            },
+            { 
+                id: 'ai', 
+                name: '电脑', 
+                hand: sortThirteenGameCardsByRank(aiHand), 
+                rows: getAIThirteenGameBestArrangement(aiHand), 
+                isReady: true 
+            }
         ]);
         setIsGameActive(true);
         setComparisonResult(null);
@@ -51,7 +69,14 @@ export const GameProvider = ({ children }) => {
         setPlayers(prev => prev.map(p => p.id === playerId ? { ...p, rows: newRows } : p));
     };
 
-    const value = { players, isGameActive, startGame, setPlayerArrangement, comparisonResult, setComparisonResult };
+    const autoArrangePlayerHand = () => {
+        const player = players.find(p => p.id === 'player');
+        if (!player) return;
+        const bestRows = getAIThirteenGameBestArrangement(player.hand);
+        setPlayerArrangement('player', bestRows);
+    };
+
+    const value = { players, isGameActive, startGame, setPlayerArrangement, autoArrangePlayerHand, comparisonResult, setComparisonResult };
 
     return <GameContext.Provider value={value}>{children}</GameContext.Provider>;
 };

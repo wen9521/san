@@ -69,7 +69,7 @@ export const GameProvider = ({ children }) => {
         setPlayers(prev => prev.map(p => p.id === playerId ? { ...p, rows: newRows } : p));
     };
 
-_arrangePlayerHand = () => {
+    const autoArrangePlayerHand = () => {
         const player = players.find(p => p.id === 'player');
         if (!player) return;
         const bestRows = findBestCombination(player.hand);

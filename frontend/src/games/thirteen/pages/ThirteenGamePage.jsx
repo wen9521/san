@@ -4,7 +4,6 @@ import { useGame } from '../context/GameContext';
 import { Link, useNavigate } from 'react-router-dom';
 import ThirteenPlayerStatus from '../components/ThirteenPlayerStatus';
 import { ThirteenGameRow } from '../components/ThirteenGameRow';
-import { ThirteenHandDisplay } from '../components/ThirteenHandDisplay';
 import { getHandType } from '../utils/thirteenLogic';
 import PointsDialog from '../components/PointsDialog';
 
@@ -15,7 +14,6 @@ function ThirteenGamePage() {
     const myId = 'player';
     const [selectedCardIds, setSelectedCardIds] = useState([]);
     const [handTypes, setHandTypes] = useState({ front: '', middle: '', back: '' });
-    const [pointsDialogOpen, setPointsDialogOpen] = useState(false);
 
     useEffect(() => {
         if (player && player.rows) {
@@ -45,12 +43,10 @@ function ThirteenGamePage() {
         
         const movedCards = allCardsInRows.filter(c => selectedCardIds.includes(c.id));
         
-        // Remove moved cards from their original rows
         for (let row in newRows) {
             newRows[row] = newRows[row].filter(c => !selectedCardIds.includes(c.id));
         }
 
-        // Add moved cards to the target row
         newRows[targetRowId].push(...movedCards);
         
         setPlayerArrangement(myId, newRows);
@@ -110,12 +106,9 @@ function ThirteenGamePage() {
                     <Button variant="outlined" color="warning" onClick={() => navigate('/')} sx={{ mb: 1 }}>
                         返回大厅
                     </Button>
-                    <Button variant="contained" color="secondary" onClick={() => setPointsDialogOpen(true)}>
-                        分数详情
-                     </Button>
                 </Stack>
             </Box>
-            <PointsDialog open={pointsDialogOpen} onClose={() => setPointsDialogOpen(false)} />
+            {/* The PointsDialog component is removed from here */}
         </Box>
     );
 }

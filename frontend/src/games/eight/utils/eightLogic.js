@@ -3,18 +3,14 @@ export const EIGHT_GAME_SUITS = { 'S': 4, 'H': 3, 'C': 2, 'D': 1 };
 export const EIGHT_GAME_HAND_TYPES = { STRAIGHT_FLUSH: 5, THREE_OF_A_KIND: 4, STRAIGHT: 3, PAIR: 2, HIGH_CARD: 1 };
 export const EIGHT_GAME_SPECIAL_HAND_TYPES = { FOUR_OF_A_KIND: { score: 8, name: '四条' }, FOUR_PAIRS: { score: 8, name: '四对' } };
 
-const getRankValue = (card) => EIGHT_GAME_RANKS.indexOf(card.rank);
-const getSuitValue = (card) => EIGHT_GAME_SUITS[card.suit?.toUpperCase?.()];
+const getRankValue = (card) => card && typeof card.rank === 'string' ? EIGHT_GAME_RANKS.indexOf(card.rank) : -1;
+const getSuitValue = (card) => card && card.suit ? EIGHT_GAME_SUITS[card.suit?.toUpperCase?.()] : -1;
 
 export const sortEightGameCardsByRank = (cards) => {
-    if (!cards || !Array.isArray(cards)) return [];
-    // 修正：过滤掉无效牌对象
+    if (!Array.isArray(cards)) return [];
     return [...cards]
         .filter(card => card && typeof card.rank === 'string')
-        .sort((a, b) => {
-            if (!a || !b) return 0;
-            return getRankValue(b) - getRankValue(a);
-        });
+        .sort((a, b) => getRankValue(b) - getRankValue(a));
 };
 
 export const getHandTypeName = (evaluation) => {
@@ -30,8 +26,8 @@ export const getHandTypeName = (evaluation) => {
 };
 
 export const evaluateEightGameHand = (hand) => {
-    // 修正：先过滤无效牌
-    if (!hand || hand.length === 0) return { type: EIGHT_GAME_HAND_TYPES.HIGH_CARD, highCards: [], hand: [] };
+    // 彻底过滤无效牌
+    if (!Array.isArray(hand) || hand.length === 0) return { type: EIGHT_GAME_HAND_TYPES.HIGH_CARD, highCards: [], hand: [] };
     const validHand = hand.filter(card => card && typeof card.rank === 'string' && typeof card.suit === 'string');
     if (validHand.length === 0) return { type: EIGHT_GAME_HAND_TYPES.HIGH_CARD, highCards: [], hand: [] };
 
@@ -43,23 +39,16 @@ export const evaluateEightGameHand = (hand) => {
     const rankCounts = ranks.reduce((acc, rank) => { acc[rank] = (acc[rank] || 0) + 1; return acc; }, {});
     const counts = Object.values(rankCounts).sort((a, b) => b - a);
     const isFlush = new Set(suits).size === 1;
-    
-    // 修正：正确的A23牌组为 'A', '2', '3'，对应ranks [12, 1, 0]
     const isWheel = validHand.length === 3 && JSON.stringify(ranks) === JSON.stringify([12, 1, 0]);
     const isNormalStraight = validHand.length === 3 && new Set(ranks).size === 3 && ranks[0] - ranks[2] === 2;
     const isStraight = isNormalStraight || isWheel;
 
     let straightRank = 0;
     if (isStraight) {
-        if (ranks[0] === 12 && ranks[1] === 11) { // AKQ
-            straightRank = 13; 
-        } else if (isWheel) { // A23
-            straightRank = 12;
-        } else {
-            straightRank = ranks[0]; // K Q J -> 11
-        }
+        if (ranks[0] === 12 && ranks[1] === 11) straightRank = 13;
+        else if (isWheel) straightRank = 12;
+        else straightRank = ranks[0];
     }
-    
     if (isStraight && isFlush) return { type: EIGHT_GAME_HAND_TYPES.STRAIGHT_FLUSH, highCards, hand: validHand, maxSuit, straightRank };
     if (counts[0] === 3) return { type: EIGHT_GAME_HAND_TYPES.THREE_OF_A_KIND, highCards, hand: validHand, maxSuit };
     if (isStraight) return { type: EIGHT_GAME_HAND_TYPES.STRAIGHT, highCards, hand: validHand, maxSuit, straightRank };
@@ -70,7 +59,6 @@ export const evaluateEightGameHand = (hand) => {
 export const compareEightGameHands = (handA, handB) => {
     if (!handA || !handB) return 0;
     if (handA.type !== handB.type) return handA.type - handB.type;
-    // 修正：优先使用 straightRank 比较顺子
     if (handA.type === EIGHT_GAME_HAND_TYPES.STRAIGHT || handA.type === EIGHT_GAME_HAND_TYPES.STRAIGHT_FLUSH) {
         if (handA.straightRank !== handB.straightRank) {
             return handA.straightRank - handB.straightRank;
@@ -114,7 +102,7 @@ export const calculateEightGameTotalScore = (playerARows, playerBRows) => {
 };
 
 export const checkForEightGameSpecialHand = (fullHand) => {
-    if (!fullHand || fullHand.length !== 8) return null;
+    if (!Array.isArray(fullHand) || fullHand.length !== 8) return null;
     const validHand = fullHand.filter(card => card && typeof card.rank === 'string');
     const ranks = validHand.map(c => getRankValue(c));
     const rankCounts = ranks.reduce((acc, rank) => { acc[rank] = (acc[rank] || 0) + 1; return acc; }, {});
@@ -125,7 +113,7 @@ export const checkForEightGameSpecialHand = (fullHand) => {
 };
 
 const combinations = (array, k) => {
-    const input = array.filter(card => card && typeof card.rank === 'string');
+    const input = Array.isArray(array) ? array.filter(card => card && typeof card.rank === 'string') : [];
     const result = [];
     function f(p, a, n) { if (n === 0) { result.push(p); return; } for (let i = 0; i < a.length; i++) f(p.concat(a[i]), a.slice(i + 1), n - 1); }
     f([], input, k);
@@ -133,13 +121,14 @@ const combinations = (array, k) => {
 };
 
 export const getAIEightGameBestArrangement = (fullHand) => {
-    if (!fullHand || fullHand.length !== 8) return { front: [], middle: [], back: [] };
-    const allFrontHands = combinations(fullHand, 2);
+    if (!Array.isArray(fullHand) || fullHand.length !== 8) return { front: [], middle: [], back: [] };
+    const validHand = fullHand.filter(card => card && typeof card.rank === 'string');
+    const allFrontHands = combinations(validHand, 2);
     let bestArrangement = null;
     let maxScore = -Infinity;
 
     for (const currentFront of allFrontHands) {
-        const remaining6 = fullHand.filter(card => card && typeof card.rank === 'string' && !currentFront.some(fc => fc.id === card.id));
+        const remaining6 = validHand.filter(card => !currentFront.some(fc => fc.id === card.id));
         const allMiddleHands = combinations(remaining6, 3);
         for (const currentMiddle of allMiddleHands) {
             const currentBack = remaining6.filter(card => !currentMiddle.some(mc => mc.id === card.id));
@@ -152,7 +141,7 @@ export const getAIEightGameBestArrangement = (fullHand) => {
                 if (totalScore > maxScore) {
                     maxScore = totalScore;
                     bestArrangement = currentArrangement;
-                } else if (totalScore === maxScore) {
+                } else if (totalScore === maxScore && bestArrangement) {
                     // If scores are equal, prioritize arrangements with higher-ranked hands in later rows (middle then back)
                     const currentMiddleEval = evaluateEightGameHand(currentMiddle);
                     const bestMiddleEval = evaluateEightGameHand(bestArrangement.middle);
@@ -169,10 +158,8 @@ export const getAIEightGameBestArrangement = (fullHand) => {
             }
         }
     }
-    
     if (bestArrangement) return bestArrangement;
-
     console.warn("AI Warning: No valid 8-card arrangement found. Providing default sorted layout.");
-    const sortedHand = sortEightGameCardsByRank(fullHand);
+    const sortedHand = sortEightGameCardsByRank(validHand);
     return { front: sortedHand.slice(6, 8), middle: sortedHand.slice(3, 6), back: sortedHand.slice(0, 3) };
 };

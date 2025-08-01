@@ -3,7 +3,7 @@ import { Box, Typography, Button, Stack, CircularProgress, Grid } from '@mui/mat
 import { useNavigate } from 'react-router-dom';
 import EightPlayerStatus from '../components/EightPlayerStatus';
 import { EightGameRow } from '../components/EightGameRow';
-import EightHandDisplay from '../components/EightHandDisplay';
+import EightCompactHandDisplay from '../components/EightCompactHandDisplay';
 import EightSpecialHandDialog from '../components/EightSpecialHandDialog';
 import { useEightGame } from '../context/EightGameContext';
 import { sortEightGameCardsByRank, checkForEightGameSpecialHand, evaluateEightGameHand, getHandTypeName } from '../utils/eightLogic';
@@ -81,32 +81,41 @@ function EightGamePage() {
     }
     
     if (comparisonResult) {
-        const cardWidth = 50;
-        const cardHeight = 70;
         return (
-            <Box className="page-container-new-ui" sx={{justifyContent: 'center', alignItems: 'center', color: 'white', p: 1, overflowY: 'auto' }}>
-                <Typography variant="h5" align="center" sx={{ mt: 1, mb: 1 }}>比牌结果</Typography>
-                <Grid container spacing={1} justifyContent="center">
-                    {comparisonResult.players.map(p => {
-                        const scoreObj = comparisonResult.scores.find(s => s.playerId === p.id) || {};
-                        return (
-                            <Grid item xs={4} sm={4} md={4} key={p.id}>
-                                <Box sx={{ p: 1, background: 'rgba(255,255,255,0.08)', borderRadius: 2, border: scoreObj.totalScore > 0 ? '1px solid #4caf50' : (scoreObj.totalScore < 0 ? '1px solid #f44336' : '1px solid rgba(255,255,255,0.15)'), height: '100%'}}>
-                                    <Typography variant="caption" align="center" component="div" sx={{ fontWeight: 'bold' }}>{p.name}</Typography>
-                                    <Typography align="center" sx={{ color: scoreObj.totalScore > 0 ? '#66bb6a' : (scoreObj.totalScore < 0 ? '#ef5350' : 'white'), fontWeight: 'bold', fontSize: '0.8rem' }}>
-                                        {scoreObj.totalScore > 0 ? `+${scoreObj.totalScore}` : scoreObj.totalScore}
-                                    </Typography>
-                                    <EightHandDisplay hand={p.rows.front || []} cardWidth={cardWidth} cardHeight={cardHeight} />
-                                    <EightHandDisplay hand={p.rows.middle || []} cardWidth={cardWidth} cardHeight={cardHeight} />
-                                    <EightHandDisplay hand={p.rows.back || []} cardWidth={cardWidth} cardHeight={cardHeight} />
-                                </Box>
-                            </Grid>
-                        );
-                    })}
-                </Grid>
-                <Box sx={{ mt: 2, textAlign: 'center' }}>
-                    <Button variant="contained" size="medium" onClick={startGame}>再来一局</Button>
-                    <Button variant="outlined" size="medium" onClick={() => navigate('/')} sx={{ ml: 2 }}>返回大厅</Button>
+            <Box className="page-container-new-ui" sx={{ display: 'flex', flexDirection: 'column', height: '100vh', p: 1 }}>
+                <Box sx={{ flexGrow: 1, overflowY: 'auto', pb: '80px' }}>
+                    <Grid container spacing={1} justifyContent="center">
+                        {comparisonResult.players.map(p => {
+                            const scoreObj = comparisonResult.scores.find(s => s.playerId === p.id) || {};
+                            return (
+                                <Grid item xs={4} sm={4} md={4} key={p.id}>
+                                    <Box sx={{ p: 1, background: 'rgba(0,0,0,0.2)', borderRadius: 2, border: scoreObj.totalScore > 0 ? '1px solid #4caf50' : (scoreObj.totalScore < 0 ? '1px solid #f44336' : '1px solid rgba(255,255,255,0.15)'), height: '100%'}}>
+                                        <Typography variant="caption" align="center" component="div" sx={{ fontWeight: 'bold', color: 'white' }}>{p.name}</Typography>
+                                        <Typography align="center" sx={{ color: scoreObj.totalScore > 0 ? '#66bb6a' : (scoreObj.totalScore < 0 ? '#ef5350' : 'white'), fontWeight: 'bold', fontSize: '0.9rem' }}>
+                                            {scoreObj.totalScore > 0 ? `+${scoreObj.totalScore}` : scoreObj.totalScore}
+                                        </Typography>
+                                        <EightCompactHandDisplay hand={p.rows.front || []} />
+                                        <EightCompactHandDisplay hand={p.rows.middle || []} />
+                                        <EightCompactHandDisplay hand={p.rows.back || []} />
+                                    </Box>
+                                </Grid>
+                            );
+                        })}
+                    </Grid>
+                </Box>
+                <Box sx={{
+                    position: 'fixed',
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    p: 2,
+                    background: 'rgba(0, 0, 0, 0.5)',
+                    backdropFilter: 'blur(10px)',
+                    textAlign: 'center',
+                    borderTop: '1px solid rgba(255, 255, 255, 0.1)'
+                }}>
+                    <Button variant="contained" size="medium" onClick={startGame} sx={{ mr: 2 }}>再来一局</Button>
+                    <Button variant="outlined" size="medium" onClick={() => navigate('/')}>返回大厅</Button>
                 </Box>
             </Box>
         );

@@ -1,119 +1,248 @@
-// --- Card and Hand Evaluation Logic for Thirteen ---
 
-const RANKS = ['2', '3', '4', '5', '6', '7', '8', '9', 'T', 'J', 'Q', 'K', 'A'];
-const SUITS = ['D', 'C', 'H', 'S']; // Diamonds, Clubs, Hearts, Spades
+import { ranks, suits } from './deck';
 
-const getRankValue = (card) => RANKS.indexOf(card.rank);
-const getSuitValue = (card) => SUITS.indexOf(card.suit);
+export const handTypes = {
+  HIGH_CARD: 'High Card',
+  PAIR: 'Pair',
+  TWO_PAIR: 'Two Pair',
+  THREE_OF_A_KIND: 'Three of a Kind',
+  STRAIGHT: 'Straight',
+  FLUSH: 'Flush',
+  FULL_HOUSE: 'Full House',
+  FOUR_OF_A_KIND: 'Four of a Kind',
+  STRAIGHT_FLUSH: 'Straight Flush',
+  ROYAL_FLUSH: 'Royal Flush',
+};
 
-export const sortThirteenGameCardsByRank = (cards) => {
-    if (!cards || !Array.isArray(cards)) return [];
-    return [...cards].sort((a, b) => {
-        const rankDiff = getRankValue(b) - getRankValue(a);
-        if (rankDiff !== 0) return rankDiff;
-        return getSuitValue(b) - getSuitValue(a);
+const rankValues = {
+  '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9, '10': 10, 'J': 11, 'Q': 12, 'K': 13, 'A': 14,
+};
+
+export const getRankValue = (card) => rankValues[card.rank];
+
+export const sortCards = (cards) => {
+  return cards.sort((a, b) => getRankValue(a) - getRankValue(b));
+};
+
+export const getHandType = (hand) => {
+  if (!hand || hand.length === 0) return null;
+
+  const sortedHand = sortCards([...hand]);
+  const isFlush = sortedHand.every(card => card.suit === sortedHand[0].suit);
+  
+  const rankCounts = sortedHand.reduce((counts, card) => {
+    counts[card.rank] = (counts[card.rank] || 0) + 1;
+    return counts;
+  }, {});
+
+  const counts = Object.values(rankCounts);
+  const isFourOfAKind = counts.includes(4);
+  const isThreeOfAKind = counts.includes(3);
+  const pairs = counts.filter(count => count === 2).length;
+
+  const isStraight = sortedHand.every((card, i) => {
+    if (i === 0) return true;
+    return getRankValue(sortedHand[i-1]) === getRankValue(card) - 1;
+  });
+
+  // Ace-low straight (A-2-3-4-5)
+  const isAceLowStraight = JSON.stringify(sortedHand.map(c => c.rank).sort()) === JSON.stringify(['2', '3', '4', '5', 'A'].sort());
+
+
+  if (isStraight && isFlush && sortedHand[4].rank === 'A') return { type: handTypes.ROYAL_FLUSH, hand: sortedHand, rank: 10 };
+  if ((isStraight || isAceLowStraight) && isFlush) return { type: handTypes.STRAIGHT_FLUSH, hand: sortedHand, rank: 9 };
+  if (isFourOfAKind) return { type: handTypes.FOUR_OF_A_KIND, hand: sortedHand, rank: 8 };
+  if (isThreeOfAKind && pairs === 1) return { type: handTypes.FULL_HOUSE, hand: sortedHand, rank: 7 };
+  if (isFlush) return { type: handTypes.FLUSH, hand: sortedHand, rank: 6 };
+  if (isStraight || isAceLowStraight) return { type: handTypes.STRAIGHT, hand: sortedHand, rank: 5 };
+  if (isThreeOfAKind) return { type: handTypes.THREE_OF_A_KIND, hand: sortedHand, rank: 4 };
+  if (pairs === 2) return { type: handTypes.TWO_PAIR, hand: sortedHand, rank: 3 };
+  if (pairs === 1) return { type: handTypes.PAIR, hand: sortedHand, rank: 2 };
+
+  return { type: handTypes.HIGH_CARD, hand: sortedHand, rank: 1 };
+};
+
+
+export const compareHands = (handA, handB) => {
+  const typeA = getHandType(handA);
+  const typeB = getHandType(handB);
+
+  if (typeA.rank !== typeB.rank) {
+    return typeA.rank - typeB.rank;
+  }
+
+  // Handle tie-breakers
+  const sortedA = sortCards([...handA]).reverse();
+  const sortedB = sortCards([...handB]).reverse();
+
+  for (let i = 0; i < sortedA.length; i++) {
+    if (getRankValue(sortedA[i]) !== getRankValue(sortedB[i])) {
+      return getRankValue(sortedA[i]) - getRankValue(sortedB[i]);
+    }
+  }
+
+  return 0; // Hands are identical
+};
+
+export const isValidHand = (hand, position) => {
+    if (position === 'front' && hand.length !== 3) return false;
+    if (position !== 'front' && hand.length !== 5) return false;
+    // more validation logic here if needed
+    return true;
+};
+
+export const isValidSetup = (front, middle, back) => {
+  if (!isValidHand(front, 'front') || !isValidHand(middle, 'middle') || !isValidHand(back, 'back')) {
+    return false;
+  }
+  return compareHands(middle, front) > 0 && compareHands(back, middle) > 0;
+};
+
+
+function findStraight(cards) {
+    if (cards.length < 5) return null;
+    const sorted = sortCards([...cards]);
+    // Check for standard straight
+    for (let i = 0; i <= sorted.length - 5; i++) {
+        const potentialHand = sorted.slice(i, i + 5);
+        if (isStraight(potentialHand)) {
+            return potentialHand;
+        }
+    }
+    // Check for Ace-low straight
+    const aceLowRanks = ['2', '3', '4', '5', 'A'];
+    const aceLowHand = sorted.filter(c => aceLowRanks.includes(c.rank));
+    if (new Set(aceLowHand.map(c => c.rank)).size === 5) {
+        return aceLowHand;
+    }
+    return null;
+}
+
+function findFlush(cards) {
+    if (cards.length < 5) return null;
+    const suits = {};
+    cards.forEach(card => {
+        if (!suits[card.suit]) suits[card.suit] = [];
+        suits[card.suit].push(card);
     });
-};
-
-export const evaluateThirteenGameHand = (hand) => {
-    if (!hand || hand.length === 0) return { name: '无效', value: 0, highCards: [] };
-
-    const ranks = hand.map(c => getRankValue(c)).sort((a, b) => b - a);
-    const suits = hand.map(c => c.suit);
-    const rankCounts = ranks.reduce((acc, r) => { acc[r] = (acc[r] || 0) + 1; return acc; }, {});
-    const counts = Object.values(rankCounts).sort((a, b) => b - a);
-    
-    const isFlush = new Set(suits).size === 1;
-    const isStraight = new Set(ranks).size === hand.length && ranks[0] - ranks[hand.length - 1] === hand.length - 1;
-    // Ace-low straight (A-2-3-4-5)
-    const isWheel = JSON.stringify(ranks) === JSON.stringify([12, 3, 2, 1, 0]);
-
-    if (isStraight && isFlush) return { name: '同花顺', value: 8, highCards: ranks };
-    if (counts[0] === 4) return { name: '铁支', value: 7, highCards: ranks };
-    if (counts[0] === 3 && counts[1] === 2) return { name: '葫芦', value: 6, highCards: ranks };
-    if (isFlush) return { name: '同花', value: 5, highCards: ranks };
-    if (isStraight || isWheel) return { name: '顺子', value: 4, highCards: isWheel ? [3, 2, 1, 0, -1] : ranks };
-    if (counts[0] === 3) return { name: '三条', value: 3, highCards: ranks };
-    if (counts[0] === 2 && counts[1] === 2) return { name: '两对', value: 2, highCards: ranks };
-    if (counts[0] === 2) return { name: '一对', value: 1, highCards: ranks };
-    
-    return { name: '乌龙', value: 0, highCards: ranks };
-};
-
-export const getHandTypeName = (evaluation) => {
-    return evaluation ? evaluation.name : '未知';
-};
-
-const compareHands = (handA, handB) => {
-    const evalA = evaluateThirteenGameHand(handA);
-    const evalB = evaluateThirteenGameHand(handB);
-    if (evalA.value !== evalB.value) return evalA.value - evalB.value;
-    for (let i = 0; i < evalA.highCards.length; i++) {
-        if (evalA.highCards[i] !== evalB.highCards[i]) return evalA.highCards[i] - evalB.highCards[i];
-    }
-    return 0;
-};
-
-export const validateArrangement = (rows) => {
-    if (!rows || rows.front?.length !== 3 || rows.middle?.length !== 5 || rows.back?.length !== 5) {
-        return { isValid: false, message: '牌墩数量不正确' };
-    }
-    if (compareHands(rows.front, rows.middle) > 0) return { isValid: false, message: '头道大于中道' };
-    if (compareHands(rows.middle, rows.back) > 0) return { isValid: false, message: '中道大于尾道' };
-    return { isValid: true, message: '合规牌型' };
-};
-
-// --- AI Arrangement Logic ---
-
-const combinations = (arr, k) => {
-    if (k < 0 || k > arr.length) return [];
-    if (k === 0) return [[]];
-    if (k === arr.length) return [arr];
-    const result = [];
-    const recurse = (start, combo) => {
-        if (combo.length === k) {
-            result.push(combo);
-            return;
+    for (const suit in suits) {
+        if (suits[suit].length >= 5) {
+            return suits[suit].slice(0, 5); // Return the highest 5 cards of the suit
         }
-        for (let i = start; i < arr.length; i++) {
-            recurse(i + 1, [...combo, arr[i]]);
+    }
+    return null;
+}
+
+function findFourOfAKind(cards) {
+    if (cards.length < 4) return null;
+    const ranks = {};
+    cards.forEach(card => {
+        if (!ranks[card.rank]) ranks[card.rank] = [];
+        ranks[card.rank].push(card);
+    });
+    for (const rank in ranks) {
+        if (ranks[rank].length === 4) {
+            const four = ranks[rank];
+            const remaining = cards.filter(c => c.rank !== rank);
+            const kicker = sortCards(remaining).reverse()[0]; // Highest kicker
+            return [...four, kicker];
         }
-    };
-    recurse(0, []);
-    return result;
-};
+    }
+    return null;
+}
 
-// This is a simplified AI. A full implementation is too complex.
-// It finds the first valid arrangement, which is better than nothing.
-export const getAIThirteenGameBestArrangement = (hand) => {
-    const sortedHand = sortThirteenGameCardsByRank(hand);
-    
-    // Fallback: simple sorted arrangement
-    const fallbackArrangement = {
-        front: sortedHand.slice(0, 3),
-        middle: sortedHand.slice(3, 8),
-        back: sortedHand.slice(8, 13)
-    };
+function findFullHouse(cards) {
+    if (cards.length < 5) return null;
+    let three = null;
+    let pair = null;
 
-    // Attempt to find a valid arrangement by iterating through back hands
-    const backCombinations = combinations(sortedHand, 5);
+    const ranks = {};
+    cards.forEach(card => {
+        if (!ranks[card.rank]) ranks[card.rank] = [];
+        ranks[card.rank].push(card);
+    });
 
-    for (const back of backCombinations) {
-        const remainingForMiddle = sortedHand.filter(c => !back.includes(c));
-        const middleCombinations = combinations(remainingForMiddle, 5);
+    const sortedRanks = Object.keys(ranks).sort((a, b) => rankValues[b] - rankValues[a]);
 
-        for (const middle of middleCombinations) {
-            const front = remainingForMiddle.filter(c => !middle.includes(c));
-            const currentArrangement = { front, middle, back };
-
-            if (validateArrangement(currentArrangement).isValid) {
-                // Found a valid arrangement, return it
-                return currentArrangement;
+    for (const rank of sortedRanks) {
+        if (ranks[rank].length >= 3 && !three) {
+            three = ranks[rank].slice(0, 3);
+            // After finding a three of a kind, look for a pair in the remaining cards
+            const remainingCards = cards.filter(c => !three.includes(c));
+            const remainingRanks = {};
+            remainingCards.forEach(card => {
+                if (!remainingRanks[card.rank]) remainingRanks[card.rank] = [];
+                remainingRanks[card.rank].push(card);
+            });
+            const sortedRemainingRanks = Object.keys(remainingRanks).sort((a,b) => rankValues[b] - rankValues[a]);
+            for(const p_rank of sortedRemainingRanks){
+                if(remainingRanks[p_rank].length >= 2){
+                    pair = remainingRanks[p_rank].slice(0,2);
+                    return [...three, ...pair];
+                }
             }
         }
     }
+    return null;
+}
 
-    // If no valid arrangement is found after trying, return the fallback
-    console.warn("AI could not find a valid arrangement, returning default sorted split.");
-    return fallbackArrangement;
+function getCombinations(array, size) {
+    const results = [];
+    function helper(start, combination) {
+        if (combination.length === size) {
+            results.push([...combination]);
+            return;
+        }
+        for (let i = start; i < array.length; i++) {
+            combination.push(array[i]);
+            helper(i + 1, combination);
+            combination.pop();
+        }
+    }
+    helper(0, []);
+    return results;
+}
+
+export const findBestCombination = (cards) => {
+    let bestSetup = null;
+    let bestScore = -1;
+
+    const fiveCardCombinations = getCombinations(cards, 5);
+
+    for (const backHand of fiveCardCombinations) {
+        const backType = getHandType(backHand);
+        const remainingAfterBack = cards.filter(c => !backHand.includes(c));
+        const middleCombinations = getCombinations(remainingAfterBack, 5);
+
+        for (const middleHand of middleCombinations) {
+            const middleType = getHandType(middleHand);
+            const frontHand = remainingAfterBack.filter(c => !middleHand.includes(c));
+            
+            if (isValidSetup(frontHand, middleHand, backHand)) {
+                const frontType = getHandType(frontHand);
+                const score = backType.rank * 100 + middleType.rank * 10 + frontType.rank;
+                if (score > bestScore) {
+                    bestScore = score;
+                    bestSetup = {
+                        front: frontHand,
+                        middle: middleHand,
+                        back: backHand
+                    };
+                }
+            }
+        }
+    }
+    
+    // Fallback if no valid 5-5-3 was found (should be rare)
+    if (!bestSetup) {
+      console.warn("Could not find optimal 5-5-3 combination, using a simpler fallback.");
+      const sorted = sortCards([...cards]).reverse();
+      return {
+        back: sorted.slice(0,5),
+        middle: sorted.slice(5,10),
+        front: sorted.slice(10,13)
+      }
+    }
+
+    return bestSetup;
 };

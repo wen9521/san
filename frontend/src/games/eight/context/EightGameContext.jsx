@@ -16,14 +16,23 @@ export const useEightGame = () => {
     return context;
 };
 
+// 发牌ID格式修正，和十三张/图片一致
+const SUIT_NAMES = { S: 'spades', H: 'hearts', C: 'clubs', D: 'diamonds' };
+const RANK_NAMES = {
+    'A': 'ace', 'K': 'king', 'Q': 'queen', 'J': 'jack',
+    'T': '10', '9': '9', '8': '8', '7': '7', '6': '6',
+    '5': '5', '4': '4', '3': '3', '2': '2'
+};
+
 const dealCardsForEightGame = () => {
     const suits = ['S', 'H', 'C', 'D'];
     const ranks = ['2', '3', '4', '5', '6', '7', '8', '9', 'T', 'J', 'Q', 'K', 'A'];
     let deck = [];
     for (const suit of suits) {
         for (const rank of ranks) {
-            const cardId = `${rank.toLowerCase()}_of_${suit.toLowerCase()}`;
-            deck.push({ id: cardId, suit, rank });
+            const rankName = RANK_NAMES[rank];
+            const suitName = SUIT_NAMES[suit];
+            deck.push({ id: `${rankName}_of_${suitName}`, suit, rank });
         }
     }
     deck.sort(() => Math.random() - 0.5);
@@ -39,7 +48,7 @@ export const EightGameProvider = ({ children }) => {
     const [currentPlayer, setCurrentPlayer] = useState(null);
     const [isGameActive, setIsGameActive] = useState(false);
     const [comparisonResult, setComparisonResult] = useState(null);
-    const [specialHand, setSpecialHand] = useState(null); // Add state for specialHand
+    const [specialHand, setSpecialHand] = useState(null);
 
     // Ref to prevent AI arrangement from running multiple times
     const aiArrangementStarted = useRef(false);
@@ -62,7 +71,7 @@ export const EightGameProvider = ({ children }) => {
         setCurrentPlayer(playerList[0]);
         setIsGameActive(true);
         setComparisonResult(null);
-        setSpecialHand(null); // Reset special hand on new game
+        setSpecialHand(null);
         aiArrangementStarted.current = false;
     }, []);
 
@@ -71,7 +80,6 @@ export const EightGameProvider = ({ children }) => {
             const aiPlayers = players.filter(p => p.id.startsWith('ai'));
             if (aiPlayers.length > 0) {
                 aiArrangementStarted.current = true;
-                
                 aiPlayers.forEach(aiPlayer => {
                     setTimeout(() => {
                         const bestRows = getAIEightGameBestArrangement(aiPlayer.hand);
@@ -89,8 +97,8 @@ export const EightGameProvider = ({ children }) => {
     }, [startGame]);
 
     const setPlayerArrangement = (playerId, newRows) => {
-        setPlayers(prevPlayers => 
-            prevPlayers.map(p => 
+        setPlayers(prevPlayers =>
+            prevPlayers.map(p =>
                 p.id === playerId ? { ...p, rows: newRows, isReady: false } : p
             )
         );
@@ -130,7 +138,7 @@ export const EightGameProvider = ({ children }) => {
     const value = {
         players, currentPlayer, isGameActive, startGame, setPlayerArrangement,
         autoArrangePlayerHand, startComparison, comparisonResult,
-        specialHand, setSpecialHand // Expose specialHand and setSpecialHand
+        specialHand, setSpecialHand
     };
 
     return <EightGameContext.Provider value={value}>{children}</EightGameContext.Provider>;

@@ -37,6 +37,8 @@ export const evaluateEightGameHand = (hand) => {
     if (validHand.length === 0) return { type: EIGHT_GAME_HAND_TYPES.HIGH_CARD, highCards: [], hand: [] };
 
     const sortedHand = sortEightGameCardsByRank(validHand);
+    if (sortedHand.length === 0) return { type: EIGHT_GAME_HAND_TYPES.HIGH_CARD, highCards: [], hand: [] };
+
     const ranks = sortedHand.map(c => getRankValue(c));
     const suits = sortedHand.map(c => c.suit);
     let highCards = ranks;

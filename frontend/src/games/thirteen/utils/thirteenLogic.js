@@ -28,9 +28,11 @@ export const sortCards = (cards) => {
 };
 
 export const getHandType = (hand) => {
-  if (!hand || hand.length === 0) return null;
+  if (!hand || hand.length === 0) return { type: handTypes.HIGH_CARD, hand: [], rank: 1 };
 
   const sortedHand = sortCards([...hand]);
+  if (sortedHand.length === 0) return { type: handTypes.HIGH_CARD, hand: [], rank: 1 };
+
   const isFlush = sortedHand.every(card => card.suit === sortedHand[0].suit);
   
   const rankCounts = sortedHand.reduce((counts, card) => {

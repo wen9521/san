@@ -43,8 +43,8 @@ export const GameRow = ({ id, cards, label, onRowClick, selectedCardIds, onCardC
         };
     }, [cards.length, CARD_WIDTH]);
 
-    // 修正：过滤掉无效card（防止 undefined 报错）
-    const validCards = Array.isArray(cards) ? cards.filter(card => card && card.id && card.rank) : [];
+    // 修正：过滤掉无效card（防止 undefined 报错，必须包含 suit）
+    const validCards = Array.isArray(cards) ? cards.filter(card => card && card.id && card.rank && card.suit) : [];
 
     return (
         <Box 

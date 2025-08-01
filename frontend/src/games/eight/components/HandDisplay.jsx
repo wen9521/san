@@ -8,8 +8,8 @@ const HandDisplay = ({ hand, onCardClick, selectedCard }) => {
     return null;
   }
 
-  // 修正：过滤掉无效的卡牌数据
-  const validCards = hand.filter(card => card && card.id && card.rank);
+  // 修正：过滤掉无效的卡牌数据，必须包含 suit
+  const validCards = hand.filter(card => card && card.id && card.rank && card.suit);
 
   return (
     <div className="hand-display">

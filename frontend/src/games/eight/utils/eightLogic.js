@@ -8,7 +8,6 @@ const getSuitValue = (card) => card && card.suit ? EIGHT_GAME_SUITS[card.suit?.t
 
 export const sortEightGameCardsByRank = (cards) => {
     if (!Array.isArray(cards)) return [];
-    // 关键修复：在排序前彻底过滤掉所有无效或不完整的卡牌对象
     return cards
         .filter(card => card && typeof card.rank === 'string' && typeof card.suit === 'string')
         .sort((a, b) => {
@@ -31,13 +30,13 @@ export const getHandTypeName = (evaluation) => {
 };
 
 export const evaluateEightGameHand = (hand) => {
-    // 彻底过滤无效牌
     if (!Array.isArray(hand) || hand.length === 0) return { type: EIGHT_GAME_HAND_TYPES.HIGH_CARD, highCards: [], hand: [] };
+    
     const validHand = hand.filter(card => card && typeof card.rank === 'string' && typeof card.suit === 'string');
     if (validHand.length === 0) return { type: EIGHT_GAME_HAND_TYPES.HIGH_CARD, highCards: [], hand: [] };
 
     const sortedHand = sortEightGameCardsByRank(validHand);
-    if (sortedHand.length === 0) return { type: EIGHT_GAME_HAND_TYPES.HIGH_CARD, highCards: [], hand: [] };
+    const handLength = sortedHand.length;
 
     const ranks = sortedHand.map(c => getRankValue(c));
     const suits = sortedHand.map(c => c.suit);
@@ -46,8 +45,9 @@ export const evaluateEightGameHand = (hand) => {
     const rankCounts = ranks.reduce((acc, rank) => { acc[rank] = (acc[rank] || 0) + 1; return acc; }, {});
     const counts = Object.values(rankCounts).sort((a, b) => b - a);
     const isFlush = new Set(suits).size === 1;
-    const isWheel = validHand.length === 3 && JSON.stringify(ranks) === JSON.stringify([12, 1, 0]);
-    const isNormalStraight = validHand.length === 3 && new Set(ranks).size === 3 && ranks[0] - ranks[2] === 2;
+    
+    const isWheel = handLength === 3 && JSON.stringify(ranks) === JSON.stringify([12, 1, 0]);
+    const isNormalStraight = handLength === 3 && new Set(ranks).size === 3 && ranks[0] - ranks[2] === 2;
     const isStraight = isNormalStraight || isWheel;
 
     let straightRank = 0;
@@ -56,9 +56,13 @@ export const evaluateEightGameHand = (hand) => {
         else if (isWheel) straightRank = 12;
         else straightRank = ranks[0];
     }
-    if (isStraight && isFlush) return { type: EIGHT_GAME_HAND_TYPES.STRAIGHT_FLUSH, highCards, hand: validHand, maxSuit, straightRank };
-    if (counts[0] === 3) return { type: EIGHT_GAME_HAND_TYPES.THREE_OF_A_KIND, highCards, hand: validHand, maxSuit };
-    if (isStraight) return { type: EIGHT_GAME_HAND_TYPES.STRAIGHT, highCards, hand: validHand, maxSuit, straightRank };
+    
+    if (handLength === 3) {
+        if (isStraight && isFlush) return { type: EIGHT_GAME_HAND_TYPES.STRAIGHT_FLUSH, highCards, hand: validHand, maxSuit, straightRank };
+        if (counts[0] === 3) return { type: EIGHT_GAME_HAND_TYPES.THREE_OF_A_KIND, highCards, hand: validHand, maxSuit };
+        if (isStraight) return { type: EIGHT_GAME_HAND_TYPES.STRAIGHT, highCards, hand: validHand, maxSuit, straightRank };
+    }
+    
     if (counts[0] === 2) return { type: EIGHT_GAME_HAND_TYPES.PAIR, highCards, hand: validHand, maxSuit };
     return { type: EIGHT_GAME_HAND_TYPES.HIGH_CARD, highCards, hand: validHand, maxSuit };
 };
@@ -66,6 +70,7 @@ export const evaluateEightGameHand = (hand) => {
 export const compareEightGameHands = (handA, handB) => {
     if (!handA || !handB) return 0;
     if (handA.type !== handB.type) return handA.type - handB.type;
+    
     if (handA.type === EIGHT_GAME_HAND_TYPES.STRAIGHT || handA.type === EIGHT_GAME_HAND_TYPES.STRAIGHT_FLUSH) {
         if (handA.straightRank !== handB.straightRank) {
             return handA.straightRank - handB.straightRank;
@@ -82,6 +87,9 @@ export const validateEightGameArrangement = (rows) => {
     const frontHand = evaluateEightGameHand(rows.front);
     const middleHand = evaluateEightGameHand(rows.middle);
     const backHand = evaluateEightGameHand(rows.back);
+    
+    if (!frontHand || !middleHand || !backHand) return { isValid: false, message: '牌墩评估失败' };
+
     if (compareEightGameHands(frontHand, middleHand) > 0) return { isValid: false, message: '头道大于中道' };
     if (compareEightGameHands(middleHand, backHand) > 0) return { isValid: false, message: '中道大于尾道' };
     return { isValid: true };
@@ -111,6 +119,8 @@ export const calculateEightGameTotalScore = (playerARows, playerBRows) => {
 export const checkForEightGameSpecialHand = (fullHand) => {
     if (!Array.isArray(fullHand) || fullHand.length !== 8) return null;
     const validHand = fullHand.filter(card => card && typeof card.rank === 'string' && typeof card.suit === 'string');
+    if (validHand.length !== 8) return null;
+
     const ranks = validHand.map(c => getRankValue(c));
     const rankCounts = ranks.reduce((acc, rank) => { acc[rank] = (acc[rank] || 0) + 1; return acc; }, {});
     const counts = Object.values(rankCounts);
@@ -149,7 +159,6 @@ export const getAIEightGameBestArrangement = (fullHand) => {
                     maxScore = totalScore;
                     bestArrangement = currentArrangement;
                 } else if (totalScore === maxScore && bestArrangement) {
-                    // If scores are equal,优先后道/中道更大
                     const currentMiddleEval = evaluateEightGameHand(currentMiddle);
                     const bestMiddleEval = evaluateEightGameHand(bestArrangement.middle);
                     if (compareEightGameHands(currentMiddleEval, bestMiddleEval) > 0) {

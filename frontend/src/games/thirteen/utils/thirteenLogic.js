@@ -33,6 +33,7 @@ export const getHandType = (hand) => {
   const sortedHand = sortCards([...hand]);
   if (sortedHand.length === 0) return { type: handTypes.HIGH_CARD, hand: [], rank: 1 };
 
+  const handLength = sortedHand.length;
   const isFlush = sortedHand.every(card => card.suit === sortedHand[0].suit);
   
   const rankCounts = sortedHand.reduce((counts, card) => {
@@ -45,21 +46,22 @@ export const getHandType = (hand) => {
   const isThreeOfAKind = counts.includes(3);
   const pairs = counts.filter(count => count === 2).length;
 
-  const isStraight = sortedHand.every((card, i) => {
+  const isStraight = handLength === 5 && sortedHand.every((card, i) => {
     if (i === 0) return true;
     return getRankValue(sortedHand[i-1]) === getRankValue(card) - 1;
   });
 
-  // Ace-low straight (A-2-3-4-5)
-  const isAceLowStraight = JSON.stringify(sortedHand.map(c => c.rank).sort()) === JSON.stringify(['2', '3', '4', '5', 'A'].sort());
+  const isAceLowStraight = handLength === 5 && JSON.stringify(sortedHand.map(c => c.rank).sort()) === JSON.stringify(['2', '3', '4', '5', 'A'].sort());
 
-
-  if (isStraight && isFlush && sortedHand[4].rank === 'A') return { type: handTypes.ROYAL_FLUSH, hand: sortedHand, rank: 10 };
-  if ((isStraight || isAceLowStraight) && isFlush) return { type: handTypes.STRAIGHT_FLUSH, hand: sortedHand, rank: 9 };
-  if (isFourOfAKind) return { type: handTypes.FOUR_OF_A_KIND, hand: sortedHand, rank: 8 };
-  if (isThreeOfAKind && pairs === 1) return { type: handTypes.FULL_HOUSE, hand: sortedHand, rank: 7 };
-  if (isFlush) return { type: handTypes.FLUSH, hand: sortedHand, rank: 6 };
-  if (isStraight || isAceLowStraight) return { type: handTypes.STRAIGHT, hand: sortedHand, rank: 5 };
+  if (handLength === 5) {
+    if (isStraight && isFlush && sortedHand[4].rank === 'A') return { type: handTypes.ROYAL_FLUSH, hand: sortedHand, rank: 10 };
+    if ((isStraight || isAceLowStraight) && isFlush) return { type: handTypes.STRAIGHT_FLUSH, hand: sortedHand, rank: 9 };
+    if (isFourOfAKind) return { type: handTypes.FOUR_OF_A_KIND, hand: sortedHand, rank: 8 };
+    if (isThreeOfAKind && pairs === 1) return { type: handTypes.FULL_HOUSE, hand: sortedHand, rank: 7 };
+    if (isFlush) return { type: handTypes.FLUSH, hand: sortedHand, rank: 6 };
+    if (isStraight || isAceLowStraight) return { type: handTypes.STRAIGHT, hand: sortedHand, rank: 5 };
+  }
+  
   if (isThreeOfAKind) return { type: handTypes.THREE_OF_A_KIND, hand: sortedHand, rank: 4 };
   if (pairs === 2) return { type: handTypes.TWO_PAIR, hand: sortedHand, rank: 3 };
   if (pairs === 1) return { type: handTypes.PAIR, hand: sortedHand, rank: 2 };
@@ -76,7 +78,6 @@ export const compareHands = (handA, handB) => {
     return typeA.rank - typeB.rank;
   }
 
-  // Handle tie-breakers
   const sortedA = sortCards([...handA]).reverse();
   const sortedB = sortCards([...handB]).reverse();
 
@@ -86,13 +87,12 @@ export const compareHands = (handA, handB) => {
     }
   }
 
-  return 0; // Hands are identical
+  return 0;
 };
 
 export const isValidHand = (hand, position) => {
     if (position === 'front' && hand.length !== 3) return false;
     if (position !== 'front' && hand.length !== 5) return false;
-    // more validation logic here if needed
     return true;
 };
 
@@ -100,6 +100,13 @@ export const isValidSetup = (front, middle, back) => {
   if (!isValidHand(front, 'front') || !isValidHand(middle, 'middle') || !isValidHand(back, 'back')) {
     return false;
   }
+  
+  const frontType = getHandType(front);
+  const middleType = getHandType(middle);
+  const backType = getHandType(back);
+  
+  if (!frontType || !middleType || !backType) return false;
+
   return compareHands(middle, front) > 0 && compareHands(back, middle) > 0;
 };
 
@@ -107,14 +114,14 @@ export const isValidSetup = (front, middle, back) => {
 function findStraight(cards) {
     if (cards.length < 5) return null;
     const sorted = sortCards([...cards]);
-    // Check for standard straight
+    if (sorted.length < 5) return null;
+
     for (let i = 0; i <= sorted.length - 5; i++) {
         const potentialHand = sorted.slice(i, i + 5);
         if (isStraight(potentialHand)) {
             return potentialHand;
         }
     }
-    // Check for Ace-low straight
     const aceLowRanks = ['2', '3', '4', '5', 'A'];
     const aceLowHand = sorted.filter(c => aceLowRanks.includes(c.rank));
     if (new Set(aceLowHand.map(c => c.rank)).size === 5) {
@@ -132,7 +139,7 @@ function findFlush(cards) {
     });
     for (const suit in suits) {
         if (suits[suit].length >= 5) {
-            return suits[suit].slice(0, 5); // Return the highest 5 cards of the suit
+            return suits[suit].slice(0, 5);
         }
     }
     return null;
@@ -149,7 +156,8 @@ function findFourOfAKind(cards) {
         if (ranks[rank].length === 4) {
             const four = ranks[rank];
             const remaining = cards.filter(c => c.rank !== rank);
-            const kicker = sortCards(remaining).reverse()[0]; // Highest kicker
+            if (remaining.length === 0) return null; 
+            const kicker = sortCards(remaining).reverse()[0];
             return [...four, kicker];
         }
     }
@@ -172,8 +180,7 @@ function findFullHouse(cards) {
     for (const rank of sortedRanks) {
         if (ranks[rank].length >= 3 && !three) {
             three = ranks[rank].slice(0, 3);
-            // After finding a three of a kind, look for a pair in the remaining cards
-            const remainingCards = cards.filter(c => !three.includes(c));
+            const remainingCards = cards.filter(c => !three.some(tc => tc.id === c.id));
             const remainingRanks = {};
             remainingCards.forEach(card => {
                 if (!remainingRanks[card.rank]) remainingRanks[card.rank] = [];
@@ -193,13 +200,15 @@ function findFullHouse(cards) {
 
 function getCombinations(array, size) {
     const results = [];
+    const filteredArray = array.filter(Boolean); // Ensure no undefined/null elements
+
     function helper(start, combination) {
         if (combination.length === size) {
             results.push([...combination]);
             return;
         }
-        for (let i = start; i < array.length; i++) {
-            combination.push(array[i]);
+        for (let i = start; i < filteredArray.length; i++) {
+            combination.push(filteredArray[i]);
             helper(i + 1, combination);
             combination.pop();
         }
@@ -216,15 +225,21 @@ export const findBestCombination = (cards) => {
 
     for (const backHand of fiveCardCombinations) {
         const backType = getHandType(backHand);
-        const remainingAfterBack = cards.filter(c => !backHand.includes(c));
+        if (!backType) continue;
+
+        const remainingAfterBack = cards.filter(c => !backHand.some(bh => bh.id === c.id));
         const middleCombinations = getCombinations(remainingAfterBack, 5);
 
         for (const middleHand of middleCombinations) {
             const middleType = getHandType(middleHand);
-            const frontHand = remainingAfterBack.filter(c => !middleHand.includes(c));
+            if (!middleType) continue;
+
+            const frontHand = remainingAfterBack.filter(c => !middleHand.some(mh => mh.id === c.id));
             
             if (isValidSetup(frontHand, middleHand, backHand)) {
                 const frontType = getHandType(frontHand);
+                if (!frontType) continue;
+
                 const score = backType.rank * 100 + middleType.rank * 10 + frontType.rank;
                 if (score > bestScore) {
                     bestScore = score;
@@ -238,7 +253,6 @@ export const findBestCombination = (cards) => {
         }
     }
     
-    // Fallback if no valid 5-5-3 was found (should be rare)
     if (!bestSetup) {
       console.warn("Could not find optimal 5-5-3 combination, using a simpler fallback.");
       const sorted = sortCards([...cards]).reverse();

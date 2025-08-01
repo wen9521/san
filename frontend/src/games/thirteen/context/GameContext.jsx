@@ -24,7 +24,7 @@ const dealCards = () => {
         }
     }
     deck.sort(() => Math.random() - 0.5);
-    return [deck.slice(0, 13), deck.slice(13, 26)];
+    return [deck.slice(0, 13), deck.slice(13, 26), deck.slice(26, 39), deck.slice(39, 52)];
 };
 
 export const GameProvider = ({ children }) => {
@@ -33,7 +33,7 @@ export const GameProvider = ({ children }) => {
     const [comparisonResult, setComparisonResult] = useState(null);
 
     const startGame = useCallback(() => {
-        const [playerHandRaw, aiHand] = dealCards();
+        const [playerHandRaw, aiHand1, aiHand2, aiHand3] = dealCards();
         const playerHand = sortCards(playerHandRaw);
         
         setPlayers([
@@ -41,7 +41,6 @@ export const GameProvider = ({ children }) => {
                 id: 'player', 
                 name: '你', 
                 hand: playerHand, 
-                // 直接将牌按 3-5-5 分配到牌道
                 rows: { 
                     front: playerHand.slice(0, 3), 
                     middle: playerHand.slice(3, 8), 
@@ -50,10 +49,24 @@ export const GameProvider = ({ children }) => {
                 isReady: false 
             },
             { 
-                id: 'ai', 
-                name: '电脑', 
-                hand: sortCards(aiHand), 
-                rows: findBestCombination(aiHand), 
+                id: 'ai1', 
+                name: '电脑1', 
+                hand: sortCards(aiHand1), 
+                rows: findBestCombination(aiHand1), 
+                isReady: true 
+            },
+            { 
+                id: 'ai2', 
+                name: '电脑2', 
+                hand: sortCards(aiHand2), 
+                rows: findBestCombination(aiHand2), 
+                isReady: true 
+            },
+            { 
+                id: 'ai3', 
+                name: '电脑3', 
+                hand: sortCards(aiHand3), 
+                rows: findBestCombination(aiHand3), 
                 isReady: true 
             }
         ]);

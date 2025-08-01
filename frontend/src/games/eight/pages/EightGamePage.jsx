@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Box, Typography, Button, Stack, CircularProgress } from '@mui/material';
+import { Box, Typography, Button, Stack, CircularProgress, Grid } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import EightPlayerStatus from '../components/EightPlayerStatus';
 import { EightGameRow } from '../components/EightGameRow';
@@ -81,28 +81,32 @@ function EightGamePage() {
     }
     
     if (comparisonResult) {
+        const cardWidth = 50;
+        const cardHeight = 70;
         return (
-            <Box className="page-container-new-ui" sx={{justifyContent: 'center', alignItems: 'center', color: 'white', p: 2 }}>
-                <Typography variant="h4" align="center" sx={{ mt: 2, mb: 2 }}>比牌结果</Typography>
-                <Stack direction="row" spacing={2} justifyContent="center" flexWrap="wrap">
+            <Box className="page-container-new-ui" sx={{justifyContent: 'center', alignItems: 'center', color: 'white', p: 1, overflowY: 'auto' }}>
+                <Typography variant="h5" align="center" sx={{ mt: 1, mb: 1 }}>比牌结果</Typography>
+                <Grid container spacing={1} justifyContent="center">
                     {comparisonResult.players.map(p => {
                         const scoreObj = comparisonResult.scores.find(s => s.playerId === p.id) || {};
                         return (
-                            <Box key={p.id} sx={{ p: 2, minWidth: 220, background: 'rgba(255,255,255,0.08)', borderRadius: 2, border: scoreObj.totalScore > 0 ? '2px solid #4caf50' : (scoreObj.totalScore < 0 ? '2px solid #f44336' : '2px solid rgba(255,255,255,0.15)')}}>
-                                <Typography variant="subtitle1" align="center">{p.name}</Typography>
-                                <Typography align="center" sx={{ color: scoreObj.totalScore > 0 ? '#66bb6a' : (scoreObj.totalScore < 0 ? '#ef5350' : 'white'), fontWeight: 'bold' }}>
-                                    {scoreObj.totalScore > 0 ? `+${scoreObj.totalScore}` : scoreObj.totalScore}
-                                </Typography>
-                                <EightHandDisplay hand={p.rows.front || []} />
-                                <EightHandDisplay hand={p.rows.middle || []} />
-                                <EightHandDisplay hand={p.rows.back || []} />
-                            </Box>
+                            <Grid item xs={4} sm={4} md={4} key={p.id}>
+                                <Box sx={{ p: 1, background: 'rgba(255,255,255,0.08)', borderRadius: 2, border: scoreObj.totalScore > 0 ? '1px solid #4caf50' : (scoreObj.totalScore < 0 ? '1px solid #f44336' : '1px solid rgba(255,255,255,0.15)'), height: '100%'}}>
+                                    <Typography variant="caption" align="center" component="div" sx={{ fontWeight: 'bold' }}>{p.name}</Typography>
+                                    <Typography align="center" sx={{ color: scoreObj.totalScore > 0 ? '#66bb6a' : (scoreObj.totalScore < 0 ? '#ef5350' : 'white'), fontWeight: 'bold', fontSize: '0.8rem' }}>
+                                        {scoreObj.totalScore > 0 ? `+${scoreObj.totalScore}` : scoreObj.totalScore}
+                                    </Typography>
+                                    <EightHandDisplay hand={p.rows.front || []} cardWidth={cardWidth} cardHeight={cardHeight} />
+                                    <EightHandDisplay hand={p.rows.middle || []} cardWidth={cardWidth} cardHeight={cardHeight} />
+                                    <EightHandDisplay hand={p.rows.back || []} cardWidth={cardWidth} cardHeight={cardHeight} />
+                                </Box>
+                            </Grid>
                         );
                     })}
-                </Stack>
-                <Box sx={{ mt: 4, textAlign: 'center' }}>
-                    <Button variant="contained" size="large" onClick={startGame}>再来一局</Button>
-                    <Button variant="outlined" size="large" onClick={() => navigate('/')} sx={{ ml: 2 }}>返回大厅</Button>
+                </Grid>
+                <Box sx={{ mt: 2, textAlign: 'center' }}>
+                    <Button variant="contained" size="medium" onClick={startGame}>再来一局</Button>
+                    <Button variant="outlined" size="medium" onClick={() => navigate('/')} sx={{ ml: 2 }}>返回大厅</Button>
                 </Box>
             </Box>
         );

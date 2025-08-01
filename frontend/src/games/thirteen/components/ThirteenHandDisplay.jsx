@@ -2,7 +2,7 @@ import React from 'react';
 import { ThirteenPokerCard } from './ThirteenPokerCard';
 import '../../../styles/App.css';
 
-const ThirteenHandDisplay = ({ hand, onCardClick, selectedCardIds }) => {
+const ThirteenHandDisplay = ({ hand, onCardClick, selectedCardIds, cardWidth, cardHeight }) => {
     if (!hand || hand.length === 0) {
         return null;
     }
@@ -20,6 +20,8 @@ const ThirteenHandDisplay = ({ hand, onCardClick, selectedCardIds }) => {
                         index={index}
                         isSelected={isSelected}
                         onClick={onCardClick ? () => onCardClick(card.id) : undefined}
+                        width={cardWidth}
+                        height={cardHeight}
                     />
                 );
             })}

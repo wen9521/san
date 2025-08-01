@@ -2,19 +2,16 @@ import React from 'react';
 import { EightPokerCard } from './EightPokerCard';
 import '../../../styles/App.css';
 
-// 【已修复】确保所有父组件都传入 onCardClick 函数
-const EightHandDisplay = ({ hand, onCardClick, selectedCard }) => {
+const EightHandDisplay = ({ hand, onCardClick, selectedCard, cardWidth, cardHeight }) => {
   if (!hand || hand.length === 0) {
     return null;
   }
 
-  // 修正：过滤掉无效的卡牌数据，必须包含 suit
   const validCards = hand.filter(card => card && card.id && card.rank && card.suit);
 
   return (
     <div className="hand-display">
       {validCards.map((card, index) => {
-        // 检查这张牌是否被选中
         const isSelected = selectedCard && selectedCard.id === card.id;
         return (
           <EightPokerCard 
@@ -23,6 +20,8 @@ const EightHandDisplay = ({ hand, onCardClick, selectedCard }) => {
             index={index}
             isSelected={isSelected}
             onClick={onCardClick ? () => onCardClick(card) : undefined}
+            width={cardWidth}
+            height={cardHeight}
           />
         );
       })}

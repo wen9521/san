@@ -5,6 +5,7 @@ import PlayerStatus from '../components/PlayerStatus';
 import { GameRow } from '../components/GameRow';
 import HandDisplay from '../components/HandDisplay';
 import SpecialHandDialog from '../components/SpecialHandDialog';
+import DutouDialog from '../components/DutouDialog';
 import { useEightGame } from '../context/EightGameContext';
 import { sortEightGameCardsByRank, checkForEightGameSpecialHand, evaluateEightGameHand, getHandTypeName } from '../utils/eightLogic';
 
@@ -18,6 +19,7 @@ function EightGamePage() {
     const navigate = useNavigate();
     const [selectedCardIds, setSelectedCardIds] = useState([]);
     const [handTypes, setHandTypes] = useState({ front: '', middle: '', back: '' });
+    const [dutouDialogOpen, setDutouDialogOpen] = useState(false);
     const myId = 'player';
     const player = players.find(p => p.id === myId);
 
@@ -76,6 +78,10 @@ function EightGamePage() {
         if (!result.success) alert(result.message || "所有玩家未准备好");
     };
     
+    const handleDutouOpen = () => {
+        setDutouDialogOpen(true);
+    };
+
     if (!player) {
         return <Box className="page-container-new-ui" sx={{justifyContent: 'center', alignItems: 'center'}}><CircularProgress /><Typography sx={{color: 'white', mt: 2}}>正在创建八张牌局...</Typography></Box>;
     }
@@ -120,10 +126,12 @@ function EightGamePage() {
                 </Stack>
                 <Stack direction="row" spacing={1} justifyContent="center" sx={{ p: 1, flexWrap: 'wrap' }}>
                     <Button variant="contained" color="secondary" onClick={handleAutoArrange} sx={{ mb: 1 }}>智能分牌</Button>
+                    <Button variant="contained" color="primary" onClick={handleDutouOpen} sx={{ mb: 1 }}>独头</Button>
                     <Button variant="contained" color="success" onClick={handleStartComparison} sx={{ mb: 1 }}>开始比牌</Button>
                     <Button variant="outlined" color="warning" onClick={() => navigate('/')} sx={{ mb: 1 }}>返回大厅</Button>
                 </Stack>
                 <SpecialHandDialog open={!!specialHand} specialHandName={specialHand?.name} onClose={() => setSpecialHand(null)} onConfirm={() => setSpecialHand(null)} />
+                <DutouDialog open={dutouDialogOpen} onClose={() => setDutouDialogOpen(false)} />
             </Box>
         </Box>
     );

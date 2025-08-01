@@ -39,7 +39,8 @@ export const EightGameProvider = ({ children }) => {
     const [currentPlayer, setCurrentPlayer] = useState(null);
     const [isGameActive, setIsGameActive] = useState(false);
     const [comparisonResult, setComparisonResult] = useState(null);
-    
+    const [specialHand, setSpecialHand] = useState(null); // Add state for specialHand
+
     // Ref to prevent AI arrangement from running multiple times
     const aiArrangementStarted = useRef(false);
 
@@ -50,7 +51,6 @@ export const EightGameProvider = ({ children }) => {
 
         const playerList = ids.map((id, idx) => {
             const hand = sortEightGameCardsByRank(hands[idx]);
-            // 【核心修改】为玩家直接设置初始牌墩
             const initialRows = (id === 'player') 
                 ? { front: [], middle: hand, back: [] } 
                 : { front: [], middle: [], back: [] };
@@ -62,10 +62,10 @@ export const EightGameProvider = ({ children }) => {
         setCurrentPlayer(playerList[0]);
         setIsGameActive(true);
         setComparisonResult(null);
+        setSpecialHand(null); // Reset special hand on new game
         aiArrangementStarted.current = false;
     }, []);
 
-    // 【新增】AI异步、后台理牌
     useEffect(() => {
         if (isGameActive && players.length > 0 && !aiArrangementStarted.current) {
             const aiPlayers = players.filter(p => p.id.startsWith('ai'));
@@ -88,7 +88,6 @@ export const EightGameProvider = ({ children }) => {
         startGame();
     }, [startGame]);
 
-    // 【已重构】此函数现在只更新玩家牌墩
     const setPlayerArrangement = (playerId, newRows) => {
         setPlayers(prevPlayers => 
             prevPlayers.map(p => 
@@ -105,7 +104,6 @@ export const EightGameProvider = ({ children }) => {
     };
 
     const startComparison = () => {
-        // 确认前，将玩家标记为 ready
         let finalPlayers = players;
         const player = finalPlayers.find(p => p.id === 'player');
         if(player && !player.isReady) {
@@ -131,7 +129,8 @@ export const EightGameProvider = ({ children }) => {
 
     const value = {
         players, currentPlayer, isGameActive, startGame, setPlayerArrangement,
-        autoArrangePlayerHand, startComparison, comparisonResult
+        autoArrangePlayerHand, startComparison, comparisonResult,
+        specialHand, setSpecialHand // Expose specialHand and setSpecialHand
     };
 
     return <EightGameContext.Provider value={value}>{children}</EightGameContext.Provider>;

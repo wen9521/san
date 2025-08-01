@@ -1,7 +1,7 @@
 import React from 'react';
 import { Box, Typography, Chip } from '@mui/material';
 import { PokerCard } from './PokerCard'; // Corrected import path
-import '../styles/App.css'; 
+import '../../../styles/App.css'; 
 
 const AIResultRow = ({ name, cards, typeName, result }) => {
     let resultColor = 'default';

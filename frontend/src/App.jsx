@@ -1,14 +1,17 @@
 import React from 'react';
 import { Routes, Route } from 'react-router-dom';
 import HomePage from './pages/HomePage';
-import ThirteenGamePage from './pages/ThirteenGamePage';
-import ComparisonPage from './pages/ComparisonPage';
 import RoomSelectionPage from './pages/RoomSelectionPage';
-import EightGamePage from './pages/EightGamePage';
-import { GameProvider as ThirteenGameProvider } from './context/GameContext'; // 重命名以区分
-import { EightGameProvider } from './context/EightGameContext'; // 【新增】引入八张游戏Context
 
-// 十三张游戏布局
+// Import game-specific components from their new, separated locations
+import ThirteenGamePage from './games/thirteen/pages/ThirteenGamePage';
+import ComparisonPage from './games/thirteen/pages/ComparisonPage';
+import { GameProvider as ThirteenGameProvider } from './games/thirteen/context/GameContext';
+
+import EightGamePage from './games/eight/pages/EightGamePage';
+import { EightGameProvider } from './games/eight/context/EightGameContext';
+
+// Layout for the Thirteen card game, wrapped in its own provider
 const ThirteenGameLayout = () => (
   <ThirteenGameProvider>
     <Routes>
@@ -18,12 +21,11 @@ const ThirteenGameLayout = () => (
   </ThirteenGameProvider>
 );
 
-// 【核心改造】: 八张游戏布局现在使用自己的Provider
+// Layout for the Eight card game, wrapped in its own provider
 const EightGameLayout = () => (
     <EightGameProvider>
         <Routes>
             <Route path="play" element={<EightGamePage />} />
-            {/* <Route path="comparison" element={<EightComparisonPage />} /> */}
         </Routes>
     </EightGameProvider>
 );
@@ -34,6 +36,7 @@ function App() {
       <Route path="/" element={<HomePage />} />
       <Route path="/rooms" element={<RoomSelectionPage />} />
       
+      {/* Route groups for each game */}
       <Route path="/thirteen/*" element={<ThirteenGameLayout />} />
       <Route path="/eight/*" element={<EightGameLayout />} />
 

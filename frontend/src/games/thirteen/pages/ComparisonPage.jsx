@@ -2,7 +2,7 @@ import React from 'react';
 import { Box, Typography, Button, Stack } from '@mui/material';
 import { useGame } from '../context/GameContext';
 import { Link } from 'react-router-dom';
-import HandDisplay from '../components/HandDisplay';
+import ThirteenHandDisplay from '../components/ThirteenHandDisplay';
 
 function ComparisonPage() {
     const { players } = useGame();
@@ -14,9 +14,9 @@ function ComparisonPage() {
                 {players.map(p => (
                     <Box key={p.id} sx={{ p: 2, minWidth: 260, background: 'rgba(255,255,255,0.08)', borderRadius: 2, border: '2px solid rgba(255,255,255,0.15)' }}>
                         <Typography variant="subtitle1" align="center">{p.name}</Typography>
-                        <HandDisplay hand={p.rows.front || []} />
-                        <HandDisplay hand={p.rows.middle || []} />
-                        <HandDisplay hand={p.rows.back || []} />
+                        <ThirteenHandDisplay hand={p.rows.front || []} />
+                        <ThirteenHandDisplay hand={p.rows.middle || []} />
+                        <ThirteenHandDisplay hand={p.rows.back || []} />
                     </Box>
                 ))}
             </Stack>

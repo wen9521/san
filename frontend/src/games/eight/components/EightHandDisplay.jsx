@@ -1,9 +1,9 @@
 import React from 'react';
-import { PokerCard } from './PokerCard';
+import { EightPokerCard } from './EightPokerCard';
 import '../../../styles/App.css';
 
 // 【已修复】确保所有父组件都传入 onCardClick 函数
-const HandDisplay = ({ hand, onCardClick, selectedCard }) => {
+const EightHandDisplay = ({ hand, onCardClick, selectedCard }) => {
   if (!hand || hand.length === 0) {
     return null;
   }
@@ -17,7 +17,7 @@ const HandDisplay = ({ hand, onCardClick, selectedCard }) => {
         // 检查这张牌是否被选中
         const isSelected = selectedCard && selectedCard.id === card.id;
         return (
-          <PokerCard 
+          <EightPokerCard 
             key={card.id} 
             card={card} 
             index={index}
@@ -30,4 +30,4 @@ const HandDisplay = ({ hand, onCardClick, selectedCard }) => {
   );
 };
 
-export default HandDisplay;
+export default EightHandDisplay;

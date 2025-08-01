@@ -2,10 +2,13 @@ import React from 'react';
 import { Box, Typography } from '@mui/material';
 
 /**
- * 通用玩家状态栏，适用于十三张/八张所有玩家数
+ * 通用玩家状态栏，适用于八张所有玩家数
  * 已移除独头功能与文字
  */
-const PlayerStatus = ({ players = [], myId }) => {
+const EightPlayerStatus = ({
+    players = [],
+    myId
+}) => {
     if (!players || players.length === 0) return null;
 
     const renderPlayerCell = (player, isSelf = false) => (
@@ -51,4 +54,4 @@ const PlayerStatus = ({ players = [], myId }) => {
     );
 };
 
-export default PlayerStatus;
+export default EightPlayerStatus;

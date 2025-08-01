@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Box, Typography, Button, CircularProgress, Stack } from '@mui/material';
 import { useGame } from '../context/GameContext';
 import { Link, useNavigate } from 'react-router-dom';
-import PlayerStatus from '../components/PlayerStatus';
-import { GameRow } from '../components/GameRow';
+import ThirteenPlayerStatus from '../components/ThirteenPlayerStatus';
+import { ThirteenGameRow } from '../components/ThirteenGameRow';
+import { ThirteenHandDisplay } from '../components/ThirteenHandDisplay';
 import { getHandType } from '../utils/thirteenLogic';
 import PointsDialog from '../components/PointsDialog';
 
@@ -66,9 +67,9 @@ function ThirteenGamePage() {
     return (
         <Box className="page-container-new-ui">
             <Box className="game-board glass-effect">
-                <PlayerStatus players={players} myId={myId} />
+                <ThirteenPlayerStatus players={players} myId={myId} />
                 <Stack spacing={2} sx={{ flexGrow: 1, justifyContent: 'center' }}>
-                    <GameRow
+                    <ThirteenGameRow
                         id="front"
                         label="头道"
                         cards={rows.front}
@@ -77,7 +78,7 @@ function ThirteenGamePage() {
                         selectedCardIds={selectedCardIds}
                         typeName={handTypes.front}
                     />
-                    <GameRow
+                    <ThirteenGameRow
                         id="middle"
                         label="中道"
                         cards={rows.middle}
@@ -86,7 +87,7 @@ function ThirteenGamePage() {
                         selectedCardIds={selectedCardIds}
                         typeName={handTypes.middle}
                     />
-                    <GameRow
+                    <ThirteenGameRow
                         id="back"
                         label="尾道"
                         cards={rows.back}

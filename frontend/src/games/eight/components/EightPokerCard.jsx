@@ -1,7 +1,7 @@
 import React from 'react';
 
 // 支持 width/height 属性，默认 90x126
-export const PokerCard = ({ card, isSelected, onClick, width = 90, height = 126 }) => {
+export const EightPokerCard = ({ card, isSelected, onClick, width = 90, height = 126 }) => {
     // 防御性：card 或 card.id 不存在时不渲染
     if (!card || !card.id) return null;
 

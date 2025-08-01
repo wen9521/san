@@ -1,8 +1,8 @@
 import React from 'react';
-import { PokerCard } from './PokerCard';
+import { ThirteenPokerCard } from './ThirteenPokerCard';
 import '../../../styles/App.css';
 
-const HandDisplay = ({ hand, onCardClick, selectedCardIds }) => {
+const ThirteenHandDisplay = ({ hand, onCardClick, selectedCardIds }) => {
     if (!hand || hand.length === 0) {
         return null;
     }
@@ -14,7 +14,7 @@ const HandDisplay = ({ hand, onCardClick, selectedCardIds }) => {
             {validCards.map((card, index) => {
                 const isSelected = selectedCardIds && selectedCardIds.includes(card.id);
                 return (
-                    <PokerCard
+                    <ThirteenPokerCard
                         key={card.id}
                         card={card}
                         index={index}
@@ -27,4 +27,4 @@ const HandDisplay = ({ hand, onCardClick, selectedCardIds }) => {
     );
 };
 
-export default HandDisplay;
+export default ThirteenHandDisplay;

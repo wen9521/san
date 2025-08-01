@@ -4,7 +4,7 @@ import { Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, B
 /**
  * A dialog to ask the player if they want to use a special hand type.
  */
-const SpecialHandDialog = ({ open, specialHandName, onClose, onConfirm }) => {
+const ThirteenSpecialHandDialog = ({ open, specialHandName, onClose, onConfirm }) => {
   if (!open) {
     return null;
   }
@@ -38,4 +38,4 @@ const SpecialHandDialog = ({ open, specialHandName, onClose, onConfirm }) => {
   );
 };
 
-export default SpecialHandDialog;
+export default ThirteenSpecialHandDialog;

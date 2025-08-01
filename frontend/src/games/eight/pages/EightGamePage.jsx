@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Box, Typography, Button, Stack, CircularProgress } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
-import PlayerStatus from '../components/PlayerStatus';
-import { GameRow } from '../components/GameRow';
-import HandDisplay from '../components/HandDisplay';
-import SpecialHandDialog from '../components/SpecialHandDialog';
+import EightPlayerStatus from '../components/EightPlayerStatus';
+import { EightGameRow } from '../components/EightGameRow';
+import EightHandDisplay from '../components/EightHandDisplay';
+import EightSpecialHandDialog from '../components/EightSpecialHandDialog';
 import { useEightGame } from '../context/EightGameContext';
 import { sortEightGameCardsByRank, checkForEightGameSpecialHand, evaluateEightGameHand, getHandTypeName } from '../utils/eightLogic';
 
@@ -93,9 +93,9 @@ function EightGamePage() {
                                 <Typography align="center" sx={{ color: scoreObj.totalScore > 0 ? '#66bb6a' : (scoreObj.totalScore < 0 ? '#ef5350' : 'white'), fontWeight: 'bold' }}>
                                     {scoreObj.totalScore > 0 ? `+${scoreObj.totalScore}` : scoreObj.totalScore}
                                 </Typography>
-                                <HandDisplay hand={p.rows.front || []} />
-                                <HandDisplay hand={p.rows.middle || []} />
-                                <HandDisplay hand={p.rows.back || []} />
+                                <EightHandDisplay hand={p.rows.front || []} />
+                                <EightHandDisplay hand={p.rows.middle || []} />
+                                <EightHandDisplay hand={p.rows.back || []} />
                             </Box>
                         );
                     })}
@@ -112,18 +112,18 @@ function EightGamePage() {
     return (
         <Box className="page-container-new-ui">
             <Box className="game-board glass-effect">
-                <PlayerStatus players={players} myId={myId} />
+                <EightPlayerStatus players={players} myId={myId} />
                 <Stack spacing={2} sx={{ flexGrow: 1, justifyContent: 'center' }}>
-                    <GameRow id="front" label="头道 (2)" cards={rows.front} onCardClick={handleCardClick} onRowClick={handleRowClick} selectedCardIds={selectedCardIds} typeName={handTypes.front} />
-                    <GameRow id="middle" label="中道 (3)" cards={rows.middle} onCardClick={handleCardClick} onRowClick={handleRowClick} selectedCardIds={selectedCardIds} typeName={handTypes.middle} />
-                    <GameRow id="back" label="尾道 (3)" cards={rows.back} onCardClick={handleCardClick} onRowClick={handleRowClick} selectedCardIds={selectedCardIds} typeName={handTypes.back} />
+                    <EightGameRow id="front" label="头道 (2)" cards={rows.front} onCardClick={handleCardClick} onRowClick={handleRowClick} selectedCardIds={selectedCardIds} typeName={handTypes.front} />
+                    <EightGameRow id="middle" label="中道 (3)" cards={rows.middle} onCardClick={handleCardClick} onRowClick={handleRowClick} selectedCardIds={selectedCardIds} typeName={handTypes.middle} />
+                    <EightGameRow id="back" label="尾道 (3)" cards={rows.back} onCardClick={handleCardClick} onRowClick={handleRowClick} selectedCardIds={selectedCardIds} typeName={handTypes.back} />
                 </Stack>
                 <Stack direction="row" spacing={1} justifyContent="center" sx={{ p: 1, flexWrap: 'wrap' }}>
                     <Button variant="contained" color="secondary" onClick={handleAutoArrange} sx={{ mb: 1 }}>智能分牌</Button>
                     <Button variant="contained" color="success" onClick={handleStartComparison} sx={{ mb: 1 }}>开始比牌</Button>
                     <Button variant="outlined" color="warning" onClick={() => navigate('/')} sx={{ mb: 1 }}>返回大厅</Button>
                 </Stack>
-                <SpecialHandDialog open={!!specialHand} specialHandName={specialHand?.name} onClose={() => setSpecialHand(null)} onConfirm={() => setSpecialHand(null)} />
+                <EightSpecialHandDialog open={!!specialHand} specialHandName={specialHand?.name} onClose={() => setSpecialHand(null)} onConfirm={() => setSpecialHand(null)} />
             </Box>
         </Box>
     );

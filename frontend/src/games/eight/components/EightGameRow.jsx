@@ -1,8 +1,8 @@
 import React, { useState, useRef, useLayoutEffect } from 'react';
 import { Box, Typography, Chip } from '@mui/material';
-import { PokerCard } from './PokerCard';
+import { EightPokerCard } from './EightPokerCard';
 
-export const GameRow = ({ id, cards, label, onRowClick, selectedCardIds, onCardClick, typeName }) => {
+export const EightGameRow = ({ id, cards, label, onRowClick, selectedCardIds, onCardClick, typeName }) => {
     const CARD_WIDTH = 80;
     const CARD_HEIGHT = 112;
     const SELECTED_LIFT = 20;
@@ -89,7 +89,7 @@ export const GameRow = ({ id, cards, label, onRowClick, selectedCardIds, onCardC
                                 transform: isSelected ? `translateY(-${SELECTED_LIFT}px)` : 'none',
                             }}
                         >
-                            <PokerCard 
+                            <EightPokerCard 
                                 card={card} 
                                 isSelected={isSelected} 
                                 onClick={onCardClick}
@@ -98,7 +98,7 @@ export const GameRow = ({ id, cards, label, onRowClick, selectedCardIds, onCardC
                             />
                         </Box>
                     );
-                })}。
+                })}
             </Box>
 
             {/* Label on the right */}

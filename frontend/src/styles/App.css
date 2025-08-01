@@ -60,3 +60,33 @@
   box-shadow: 0 0 15px 5px rgba(255, 255, 0, 0.7);
   z-index: 10;
 }
+
+/* 手牌展示容器，实现卡片平铺和重叠效果 */
+.hand-display {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 10px;
+  position: relative;
+  min-height: 146px; /* 126px card height + 20px padding */
+}
+
+.hand-display .poker-card {
+  margin-left: -50px; /* 控制卡片重叠 */
+  transition: transform 0.2s ease-in-out, margin 0.2s ease-in-out;
+}
+
+/* 第一张牌没有左边距 */
+.hand-display .poker-card:first-child {
+  margin-left: 0;
+}
+
+/* 鼠标悬停时，当前牌和右侧所有牌向右移动，以“展开”手牌 */
+.hand-display:hover .poker-card:hover {
+  transform: translateY(-20px) scale(1.05);
+  margin-right: 25px; /* 为右侧牌腾出空间 */
+}
+
+.hand-display:hover .poker-card:hover ~ .poker-card {
+  transform: translateX(25px); /* 移动右侧的牌 */
+}

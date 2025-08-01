@@ -8,9 +8,14 @@ const getSuitValue = (card) => card && card.suit ? EIGHT_GAME_SUITS[card.suit?.t
 
 export const sortEightGameCardsByRank = (cards) => {
     if (!Array.isArray(cards)) return [];
-    return [...cards]
+    // 关键修复：在排序前彻底过滤掉所有无效或不完整的卡牌对象
+    return cards
         .filter(card => card && typeof card.rank === 'string' && typeof card.suit === 'string')
-        .sort((a, b) => getRankValue(b) - getRankValue(a));
+        .sort((a, b) => {
+            const rankA = EIGHT_GAME_RANKS.indexOf(a.rank);
+            const rankB = EIGHT_GAME_RANKS.indexOf(b.rank);
+            return rankB - rankA;
+        });
 };
 
 export const getHandTypeName = (evaluation) => {

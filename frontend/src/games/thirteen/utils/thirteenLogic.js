@@ -18,10 +18,13 @@ const rankValues = {
   '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9, 'T': 10, 'J': 11, 'Q': 12, 'K': 13, 'A': 14,
 };
 
-export const getRankValue = (card) => rankValues[card.rank];
+export const getRankValue = (card) => card && card.rank ? rankValues[card.rank] : -1;
 
 export const sortCards = (cards) => {
-  return cards.sort((a, b) => getRankValue(a) - getRankValue(b));
+    if (!Array.isArray(cards)) return [];
+    return cards
+        .filter(card => card && typeof card.rank === 'string' && typeof card.suit === 'string')
+        .sort((a, b) => rankValues[a.rank] - rankValues[b.rank]);
 };
 
 export const getHandType = (hand) => {

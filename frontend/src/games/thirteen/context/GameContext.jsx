@@ -1,21 +1,31 @@
 import React, { createContext, useState, useContext, useCallback, useEffect } from 'react';
 import { getAIThirteenGameBestArrangement, sortThirteenGameCardsByRank } from '../utils/thirteenLogic.js';
 
+// --- 修正发牌ID格式 ---
+const SUIT_NAMES = { S: 'spades', H: 'hearts', C: 'clubs', D: 'diamonds' };
+const RANK_NAMES = {
+    'A': 'ace', 'K': 'king', 'Q': 'queen', 'J': 'jack',
+    'T': '10', '9': '9', '8': '8', '7': '7', '6': '6',
+    '5': '5', '4': '4', '3': '3', '2': '2'
+};
+
 const GameContext = createContext();
 
 export const useGame = () => useContext(GameContext);
 
 const dealCards = () => {
-  const suits = ['S', 'H', 'C', 'D'];
-  const ranks = ['2', '3', '4', '5', '6', '7', '8', '9', 'T', 'J', 'Q', 'K', 'A'];
-  let deck = [];
-  for (const suit of suits) {
-    for (const rank of ranks) {
-      deck.push({ id: `${rank}_of_${suit.toLowerCase()}`, suit, rank });
+    const suits = ['S', 'H', 'C', 'D'];
+    const ranks = ['2', '3', '4', '5', '6', '7', '8', '9', 'T', 'J', 'Q', 'K', 'A'];
+    let deck = [];
+    for (const suit of suits) {
+        for (const rank of ranks) {
+            const rankName = RANK_NAMES[rank];
+            const suitName = SUIT_NAMES[suit];
+            deck.push({ id: `${rankName}_of_${suitName}`, suit, rank });
+        }
     }
-  }
-  deck.sort(() => Math.random() - 0.5);
-  return [deck.slice(0, 13), deck.slice(13, 26)];
+    deck.sort(() => Math.random() - 0.5);
+    return [deck.slice(0, 13), deck.slice(13, 26)];
 };
 
 export const GameProvider = ({ children }) => {

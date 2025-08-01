@@ -14,7 +14,7 @@ export const PokerCard = ({ card, isSelected, onClick, width = 90, height = 126 
         boxShadow: isSelected ? '0 0 15px rgba(255, 171, 64, 0.8)' : '0 4px 8px rgba(0,0,0,0.3)',
         borderRadius: '8px',
         cursor: 'pointer',
-        zIndex: 1, // 固定
+        zIndex: 1,
         position: 'relative'
     };
 
@@ -24,8 +24,8 @@ export const PokerCard = ({ card, isSelected, onClick, width = 90, height = 126 
     };
 
     return (
-        <div 
-            style={style} 
+        <div
+            style={style}
             className="poker-card"
             onClick={handleClick}
         >

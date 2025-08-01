@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Typography, Button } from '@mui/material';
+import { Box, Typography, Button, Stack } from '@mui/material';
 import { useGame } from '../context/GameContext';
 import { Link } from 'react-router-dom';
 import HandDisplay from '../components/HandDisplay';
@@ -8,17 +8,21 @@ function ComparisonPage() {
     const { players } = useGame();
 
     return (
-        <Box sx={{ p: 2, color: 'white' }}>
-            <Typography variant="h4">比牌结果</Typography>
-            {players.map(p => (
-                <Box key={p.id} sx={{ my: 2 }}>
-                    <Typography variant="h6">{p.name}</Typography>
-                    <HandDisplay hand={p.rows.front || []} />
-                    <HandDisplay hand={p.rows.middle || []} />
-                    <HandDisplay hand={p.rows.back || []} />
-                </Box>
-            ))}
-            <Button variant="contained" component={Link} to="/thirteen/play">返回游戏</Button>
+        <Box className="page-container-new-ui" sx={{ color: 'white', p: 2 }}>
+            <Typography variant="h4" align="center" sx={{ mt: 2, mb: 2 }}>比牌结果</Typography>
+            <Stack direction="row" spacing={2} justifyContent="center" flexWrap="wrap">
+                {players.map(p => (
+                    <Box key={p.id} sx={{ p: 2, minWidth: 260, background: 'rgba(255,255,255,0.08)', borderRadius: 2, border: '2px solid rgba(255,255,255,0.15)' }}>
+                        <Typography variant="subtitle1" align="center">{p.name}</Typography>
+                        <HandDisplay hand={p.rows.front || []} />
+                        <HandDisplay hand={p.rows.middle || []} />
+                        <HandDisplay hand={p.rows.back || []} />
+                    </Box>
+                ))}
+            </Stack>
+            <Box sx={{ mt: 4, textAlign: 'center' }}>
+                <Button variant="contained" component={Link} to="/thirteen/play">返回游戏</Button>
+            </Box>
         </Box>
     );
 }

@@ -4,7 +4,10 @@ import { useGame } from '../context/GameContext';
 import { Link, useNavigate } from 'react-router-dom';
 import PlayerStatus from '../components/PlayerStatus';
 import { GameRow } from '../components/GameRow';
-import { evaluateThirteenGameHand, getHandTypeName } from '../utils/thirteenLogic';
+import { getHandType } from '../utils/thirteenLogic';
+import PointsDialog from '../components/PointsDialog';
+import DutouDialog from '../components/DutouDialog';
+
 
 function ThirteenGamePage() {
     const { players, startGame, setPlayerArrangement, autoArrangePlayerHand } = useGame();
@@ -13,13 +16,15 @@ function ThirteenGamePage() {
     const myId = 'player';
     const [selectedCardIds, setSelectedCardIds] = useState([]);
     const [handTypes, setHandTypes] = useState({ front: '', middle: '', back: '' });
+    const [pointsDialogOpen, setPointsDialogOpen] = useState(false);
+    const [dutouDialogOpen, setDutouDialogOpen] = useState(false);
 
     useEffect(() => {
         if (player && player.rows) {
             setHandTypes({
-                front: getHandTypeName(evaluateThirteenGameHand(player.rows.front)),
-                middle: getHandTypeName(evaluateThirteenGameHand(player.rows.middle)),
-                back: getHandTypeName(evaluateThirteenGameHand(player.rows.back)),
+                front: getHandType(player.rows.front)?.type,
+                middle: getHandType(player.rows.middle)?.type,
+                back: getHandType(player.rows.back)?.type,
             });
         }
     }, [player]);
@@ -59,6 +64,10 @@ function ThirteenGamePage() {
         autoArrangePlayerHand();
         setSelectedCardIds([]);
     };
+    
+    const handleDutouOpen = () => {
+        setDutouDialogOpen(true);
+      };
 
     const { rows } = player;
     return (
@@ -107,8 +116,16 @@ function ThirteenGamePage() {
                     <Button variant="outlined" color="warning" onClick={() => navigate('/')} sx={{ mb: 1 }}>
                         返回大厅
                     </Button>
+                    <Button variant="contained" color="secondary" onClick={() => setPointsDialogOpen(true)}>
+                        分数详情
+                     </Button>
+                     <Button variant="contained" color="secondary" onClick={handleDutouOpen}>
+                        独头
+                    </Button>
                 </Stack>
             </Box>
+            <PointsDialog open={pointsDialogOpen} onClose={() => setPointsDialogOpen(false)} />
+            <DutouDialog open={dutouDialogOpen} onClose={() => setDutouDialogOpen(false)} />
         </Box>
     );
 }

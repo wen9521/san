@@ -1,5 +1,5 @@
 import React, { createContext, useState, useContext, useCallback, useEffect } from 'react';
-import { getAIThirteenGameBestArrangement, sortThirteenGameCardsByRank } from '../utils/thirteenLogic.js';
+import { findBestCombination, sortCards } from '../utils/thirteenLogic.js';
 
 const SUIT_NAMES = { S: 'spades', H: 'hearts', C: 'clubs', D: 'diamonds' };
 const RANK_NAMES = {
@@ -34,7 +34,7 @@ export const GameProvider = ({ children }) => {
 
     const startGame = useCallback(() => {
         const [playerHandRaw, aiHand] = dealCards();
-        const playerHand = sortThirteenGameCardsByRank(playerHandRaw);
+        const playerHand = sortCards(playerHandRaw);
         
         setPlayers([
             { 
@@ -52,8 +52,8 @@ export const GameProvider = ({ children }) => {
             { 
                 id: 'ai', 
                 name: '电脑', 
-                hand: sortThirteenGameCardsByRank(aiHand), 
-                rows: getAIThirteenGameBestArrangement(aiHand), 
+                hand: sortCards(aiHand), 
+                rows: findBestCombination(aiHand), 
                 isReady: true 
             }
         ]);
@@ -69,10 +69,10 @@ export const GameProvider = ({ children }) => {
         setPlayers(prev => prev.map(p => p.id === playerId ? { ...p, rows: newRows } : p));
     };
 
-    const autoArrangePlayerHand = () => {
+_arrangePlayerHand = () => {
         const player = players.find(p => p.id === 'player');
         if (!player) return;
-        const bestRows = getAIThirteenGameBestArrangement(player.hand);
+        const bestRows = findBestCombination(player.hand);
         setPlayerArrangement('player', bestRows);
     };
 

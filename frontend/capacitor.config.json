@@ -7,7 +7,7 @@
   },
   "server": {
     "androidScheme": "https",
-    "cleartext": false,
+    "cleartext": true,
     "allowNavigation": [
       "9525.ip-ddns.com"
     ]

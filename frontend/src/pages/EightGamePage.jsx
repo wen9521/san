@@ -18,37 +18,27 @@ function EightGamePage() {
     const myId = 'player';
     const player = players.find(p => p.id === myId);
 
-    // 【核心修复】添加加载守卫，确保player对象存在
-    if (!player) {
-        return (
-            <Box className="page-container">
-                <CircularProgress />
-                <Typography sx={{ color: 'white', mt: 2 }}>正在创建八张牌局...</Typography>
-            </Box>
-        );
-    }
-    
-    // 只有当player存在时，才安全地解构rows
-    const { rows, hand } = player;
-
+    // Hooks must be called unconditionally at the top level.
     useEffect(() => {
         if (!isGameActive) startGame();
     }, [isGameActive, startGame]);
 
     useEffect(() => {
-        if (hand?.length === 8) {
-            const detected = checkForEightGameSpecialHand(hand);
+        // Safely check for hand existence before processing.
+        if (player?.hand?.length === 8) {
+            const detected = checkForEightGameSpecialHand(player.hand);
             setSpecialHand(detected ? { name: detected.name } : null);
         }
-    }, [hand, setSpecialHand]);
+    }, [player?.hand, setSpecialHand]);
 
     const handleCardClick = useCallback((cardId) => {
         setSelectedCardIds(prev => prev.includes(cardId) ? prev.filter(id => id !== cardId) : [...prev, cardId]);
     }, []);
 
     const handleRowClick = useCallback((targetRowId) => {
-        if (selectedCardIds.length === 0) return;
+        if (selectedCardIds.length === 0 || !player) return;
         
+        const { rows, hand } = player;
         let newRows = JSON.parse(JSON.stringify(rows));
         let allPlayerCards = [...hand, ...newRows.front, ...newRows.middle, ...newRows.back];
         let movedCards = [];
@@ -58,20 +48,19 @@ function EightGamePage() {
             if(foundCard) movedCards.push(foundCard);
         });
 
-        // 从所有地方移除
         movedCards.forEach(cardToMove => {
              for (let row in newRows) {
                 newRows[row] = newRows[row].filter(c => c.id !== cardToMove.id);
             }
-            // 注意：这里我们不应该直接修改 context 提供的 hand
         });
 
         newRows[targetRowId] = sortEightGameCardsByRank([...newRows[targetRowId], ...movedCards]);
         setPlayerArrangement(myId, newRows);
         setSelectedCardIds([]);
-    }, [selectedCardIds, rows, hand, setPlayerArrangement, myId]);
+    }, [selectedCardIds, player, setPlayerArrangement, myId]);
 
     const handleAutoArrange = () => {
+        if (!player) return;
         autoArrangePlayerHand();
         setSelectedCardIds([]);
     };
@@ -83,6 +72,16 @@ function EightGamePage() {
 
     const handleRestart = () => startGame();
 
+    // Conditional rendering logic is now placed after all hooks.
+    if (!player) {
+        return (
+            <Box className="page-container">
+                <CircularProgress />
+                <Typography sx={{ color: 'white', mt: 2 }}>正在创建八张牌局...</Typography>
+            </Box>
+        );
+    }
+    
     if (comparisonResult) {
         return (
             <Box className="page-container" sx={{ color: 'white', p: 2 }}>
@@ -108,6 +107,9 @@ function EightGamePage() {
         );
     }
     
+    // Now it's safe to destructure after the loading guard.
+    const { rows, hand } = player;
+
     return (
         <Box className="page-container-new-ui">
             <Box className="game-board glass-effect">

@@ -6,8 +6,6 @@ import PlayerStatus from '../components/PlayerStatus';
 import { GameRow } from '../components/GameRow';
 import { getHandType } from '../utils/thirteenLogic';
 import PointsDialog from '../components/PointsDialog';
-import DutouDialog from '../components/DutouDialog';
-
 
 function ThirteenGamePage() {
     const { players, startGame, setPlayerArrangement, autoArrangePlayerHand } = useGame();
@@ -17,7 +15,6 @@ function ThirteenGamePage() {
     const [selectedCardIds, setSelectedCardIds] = useState([]);
     const [handTypes, setHandTypes] = useState({ front: '', middle: '', back: '' });
     const [pointsDialogOpen, setPointsDialogOpen] = useState(false);
-    const [dutouDialogOpen, setDutouDialogOpen] = useState(false);
 
     useEffect(() => {
         if (player && player.rows) {
@@ -64,10 +61,6 @@ function ThirteenGamePage() {
         autoArrangePlayerHand();
         setSelectedCardIds([]);
     };
-    
-    const handleDutouOpen = () => {
-        setDutouDialogOpen(true);
-      };
 
     const { rows } = player;
     return (
@@ -119,13 +112,9 @@ function ThirteenGamePage() {
                     <Button variant="contained" color="secondary" onClick={() => setPointsDialogOpen(true)}>
                         分数详情
                      </Button>
-                     <Button variant="contained" color="secondary" onClick={handleDutouOpen}>
-                        独头
-                    </Button>
                 </Stack>
             </Box>
             <PointsDialog open={pointsDialogOpen} onClose={() => setPointsDialogOpen(false)} />
-            <DutouDialog open={dutouDialogOpen} onClose={() => setDutouDialogOpen(false)} />
         </Box>
     );
 }

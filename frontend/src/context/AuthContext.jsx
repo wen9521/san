@@ -1,6 +1,7 @@
 import React, { createContext, useState, useEffect } from 'react';
 import AuthDialog from '../components/AuthDialog';
-// import PointsDialog from '../components/PointsDialog'; // Removed this line
+// 修正 PointsDialog 的导入路径
+import PointsDialog from '../games/thirteen/components/PointsDialog'; 
 import { apiRequest } from '../utils/api'; 
 
 export const AuthContext = createContext();
@@ -58,12 +59,25 @@ export function AuthProvider({ children }) {
 
   const openAuthDialog = () => setAuthDialogOpen(true);
   const openPointsDialog = () => setPointsDialogOpen(true);
+  const closePointsDialog = () => setPointsDialogOpen(false);
+
+  const searchUserByPhone = async (phone) => {
+    // 实际应调用API
+    console.log("Searching for phone:", phone);
+    return { success: true, data: { id: '123', phone } };
+  }
+
+  const transferPoints = async (toPhone, amount) => {
+    // 实际应调用API
+    console.log(`Transferring ${amount} to ${toPhone}`);
+    return { success: true, message: '积分赠送成功' };
+  }
 
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, openAuthDialog, openPointsDialog }}>
+    <AuthContext.Provider value={{ user, login, register, logout, openAuthDialog, openPointsDialog, searchUserByPhone, transferPoints }}>
       {children}
       <AuthDialog open={isAuthDialogOpen} onClose={() => setAuthDialogOpen(false)} />
-      {/* <PointsDialog open={isPointsDialogOpen} onClose={() => setPointsDialogOpen(false)} /> */}
+      <PointsDialog open={isPointsDialogOpen} onClose={closePointsDialog} />
     </AuthContext.Provider>
   );
 }

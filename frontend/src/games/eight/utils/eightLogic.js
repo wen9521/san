@@ -9,7 +9,7 @@ const getSuitValue = (card) => card && card.suit ? EIGHT_GAME_SUITS[card.suit?.t
 export const sortEightGameCardsByRank = (cards) => {
     if (!Array.isArray(cards)) return [];
     return [...cards]
-        .filter(card => card && typeof card.rank === 'string')
+        .filter(card => card && typeof card.rank === 'string' && typeof card.suit === 'string')
         .sort((a, b) => getRankValue(b) - getRankValue(a));
 };
 
@@ -103,7 +103,7 @@ export const calculateEightGameTotalScore = (playerARows, playerBRows) => {
 
 export const checkForEightGameSpecialHand = (fullHand) => {
     if (!Array.isArray(fullHand) || fullHand.length !== 8) return null;
-    const validHand = fullHand.filter(card => card && typeof card.rank === 'string');
+    const validHand = fullHand.filter(card => card && typeof card.rank === 'string' && typeof card.suit === 'string');
     const ranks = validHand.map(c => getRankValue(c));
     const rankCounts = ranks.reduce((acc, rank) => { acc[rank] = (acc[rank] || 0) + 1; return acc; }, {});
     const counts = Object.values(rankCounts);
@@ -113,7 +113,7 @@ export const checkForEightGameSpecialHand = (fullHand) => {
 };
 
 const combinations = (array, k) => {
-    const input = Array.isArray(array) ? array.filter(card => card && typeof card.rank === 'string') : [];
+    const input = Array.isArray(array) ? array.filter(card => card && typeof card.rank === 'string' && typeof card.suit === 'string') : [];
     const result = [];
     function f(p, a, n) { if (n === 0) { result.push(p); return; } for (let i = 0; i < a.length; i++) f(p.concat(a[i]), a.slice(i + 1), n - 1); }
     f([], input, k);
@@ -122,7 +122,7 @@ const combinations = (array, k) => {
 
 export const getAIEightGameBestArrangement = (fullHand) => {
     if (!Array.isArray(fullHand) || fullHand.length !== 8) return { front: [], middle: [], back: [] };
-    const validHand = fullHand.filter(card => card && typeof card.rank === 'string');
+    const validHand = fullHand.filter(card => card && typeof card.rank === 'string' && typeof card.suit === 'string');
     const allFrontHands = combinations(validHand, 2);
     let bestArrangement = null;
     let maxScore = -Infinity;

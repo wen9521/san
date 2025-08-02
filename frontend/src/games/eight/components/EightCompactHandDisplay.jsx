@@ -4,9 +4,8 @@ import { Box, Typography, Paper, Stack } from '@mui/material';
 import { EightPokerCard } from './EightPokerCard';
 import { getHandTypeName, evaluateEightGameHand } from '../utils/eightLogic';
 
-// This component is specifically for the comparison screen to show a player's hand compactly.
 const CompactCardRow = ({ cards }) => {
-    if (!cards || cards.length === 0) return <Box sx={{ height: '42px' }} />; // Placeholder for empty row
+    if (!cards || cards.length === 0) return <Box sx={{ height: '42px' }} />;
 
     return (
         <Box sx={{ display: 'flex', position: 'relative', width: `${cards.length * 15 + 25}px`, height: '42px', margin: 'auto' }}>
@@ -15,7 +14,7 @@ const CompactCardRow = ({ cards }) => {
                     key={card.id}
                     sx={{
                         position: 'absolute',
-                        left: `${index * 15}px`, // Tightly stacked
+                        left: `${index * 15}px`,
                         zIndex: index
                     }}
                 >
@@ -47,7 +46,8 @@ const EightCompactHandDisplay = ({ player, details }) => {
             </Stack>
             
             <Stack sx={{ mt: 1 }} spacing={0.5}>
-                {['back', 'middle', 'front'].map(area => {
+                {/* Corrected the display order to be front, middle, back from top to bottom */}
+                {['front', 'middle', 'back'].map(area => {
                     const handEval = details ? evaluateEightGameHand(player.rows[area]) : null;
                     const areaPoints = details ? details[area].points : 0;
                     return (

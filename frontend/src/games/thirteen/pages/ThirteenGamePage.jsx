@@ -17,13 +17,15 @@ function ThirteenGamePage() {
 
     useEffect(() => {
         if (player && player.rows) {
+            // 【重要修正】: 确保传递给 getAreaType 的是 card ID 数组
+            const getIds = (cards) => (Array.isArray(cards) ? cards.map(c => c.id) : []);
             setHandTypes({
-                front: getAreaType(player.rows.front, 'head'),
-                middle: getAreaType(player.rows.middle, 'middle'),
-                back: getAreaType(player.rows.back, 'tail'),
+                front: getAreaType(getIds(player.rows.front), 'head'),
+                middle: getAreaType(getIds(player.rows.middle), 'middle'),
+                back: getAreaType(getIds(player.rows.back), 'tail'),
             });
         }
-    }, [player]);
+    }, [player, player?.rows]); // 依赖项更新
 
     if (!player) {
         return <Box className="page-container-new-ui" sx={{justifyContent: 'center', alignItems: 'center'}}><CircularProgress /><Typography sx={{color: 'white', mt: 2}}>正在加载...</Typography></Box>;
@@ -39,14 +41,18 @@ function ThirteenGamePage() {
         if (selectedCardIds.length === 0 || !player) return;
         
         let newRows = JSON.parse(JSON.stringify(player.rows));
+        // 所有牌都在rows里，直接从rows里找
         const allCardsInRows = [...newRows.front, ...newRows.middle, ...newRows.back];
         
         const movedCards = allCardsInRows.filter(c => selectedCardIds.includes(c.id));
+        if (movedCards.length === 0) return;
         
-        for (let row in newRows) {
-            newRows[row] = newRows[row].filter(c => !selectedCardIds.includes(c.id));
-        }
+        // 从所有道中移除这些牌
+        newRows.front = newRows.front.filter(c => !selectedCardIds.includes(c.id));
+        newRows.middle = newRows.middle.filter(c => !selectedCardIds.includes(c.id));
+        newRows.back = newRows.back.filter(c => !selectedCardIds.includes(c.id));
 
+        // 添加到目标道
         newRows[targetRowId].push(...movedCards);
         
         setPlayerArrangement(myId, newRows);
@@ -70,7 +76,7 @@ function ThirteenGamePage() {
                         label="头道"
                         cards={rows.front}
                         onCardClick={handleCardClick}
-                        onRowClick={handleRowClick}
+                        onRowClick={() => handleRowClick('front')} // 传递正确的道ID
                         selectedCardIds={selectedCardIds}
                         typeName={handTypes.front}
                     />
@@ -79,7 +85,7 @@ function ThirteenGamePage() {
                         label="中道"
                         cards={rows.middle}
                         onCardClick={handleCardClick}
-                        onRowClick={handleRowClick}
+                        onRowClick={() => handleRowClick('middle')}
                         selectedCardIds={selectedCardIds}
                         typeName={handTypes.middle}
                     />
@@ -88,7 +94,7 @@ function ThirteenGamePage() {
                         label="尾道"
                         cards={rows.back}
                         onCardClick={handleCardClick}
-                        onRowClick={handleRowClick}
+                        onRowClick={() => handleRowClick('back')}
                         selectedCardIds={selectedCardIds}
                         typeName={handTypes.back}
                     />
@@ -100,7 +106,7 @@ function ThirteenGamePage() {
                     <Button variant="contained" color="primary" component={Link} to="/thirteen/comparison" sx={{ mb: 1 }}>
                         开始比牌
                     </Button>
-                    <Button variant="contained" color="success" onClick={startGame} sx={{ mb: 1 }}>
+                    <Button variant="contained" color="success" onClick={() => startGame(players.length)} sx={{ mb: 1 }}>
                         重新开始
                     </Button>
                     <Button variant="outlined" color="warning" onClick={() => navigate('/')} sx={{ mb: 1 }}>
@@ -108,7 +114,6 @@ function ThirteenGamePage() {
                     </Button>
                 </Stack>
             </Box>
-            {/* The PointsDialog component is removed from here */}
         </Box>
     );
 }

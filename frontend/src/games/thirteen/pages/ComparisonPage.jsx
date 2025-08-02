@@ -1,9 +1,9 @@
-import React, { useMemo } from 'react';
-import { Box, Typography, Button, Grid, Paper, Stack, Divider } from '@mui/material';
+import React from 'react';
+import { Box, Typography, Button, Grid, Paper, Stack, Divider, CircularProgress } from '@mui/material';
 import { useGame } from '../context/GameContext';
 import { useNavigate } from 'react-router-dom';
 import ThirteenCompactHandDisplay from '../components/ThirteenCompactHandDisplay';
-import { calcSSSAllScores, getAreaType } from '../utils/thirteenLogic'; // Updated import
+import { getAreaType } from '../utils/thirteenLogic';
 
 const PlayerComparisonCard = ({ player, totalScore, isFoul, specialType }) => {
     const getPointColor = (points) => {
@@ -16,7 +16,8 @@ const PlayerComparisonCard = ({ player, totalScore, isFoul, specialType }) => {
         <Box>
             <ThirteenCompactHandDisplay hand={hand} />
             <Typography variant="caption" sx={{ fontSize: '0.7rem', color: 'lightgray', textAlign: 'center', display: 'block' }}>
-                {getAreaType(hand, area)}
+                {/* 【重要修正】: 确保传递给 getAreaType 的是 card ID 数组 */}
+                {getAreaType(hand.map(c => c.id), area)}
             </Typography>
         </Box>
     );
@@ -43,9 +44,14 @@ const PlayerComparisonCard = ({ player, totalScore, isFoul, specialType }) => {
                 </Box>
             ) : (
                 <Stack spacing={1} sx={{height: '100%'}}>
-                    <HandRow hand={player.rows.back} area="tail" />
-                    <HandRow hand={player.rows.middle} area="middle" />
-                    <HandRow hand={player.rows.front} area="head" />
+                    {/* 确保 player.rows 存在 */}
+                    {player.rows && (
+                        <>
+                            <HandRow hand={player.rows.back} area="tail" />
+                            <HandRow hand={player.rows.middle} area="middle" />
+                            <HandRow hand={player.rows.front} area="head" />
+                        </>
+                    )}
                 </Stack>
             )}
         </Paper>
@@ -53,19 +59,22 @@ const PlayerComparisonCard = ({ player, totalScore, isFoul, specialType }) => {
 };
 
 function ComparisonPage() {
-    const { players, startGame } = useGame();
+    // 【重要修正】: 直接从 context 获取 comparisonResult
+    const { comparisonResult, startGame } = useGame();
     const navigate = useNavigate();
 
-    const comparisonResult = useMemo(() => {
-        if (!players || players.length === 0) return null;
-        return calcSSSAllScores(players);
-    }, [players]);
-
+    // 如果没有结果，显示加载状态
     if (!comparisonResult) {
-        return <Box className="page-container-new-ui"><Typography sx={{color: 'white'}}>正在计算比牌结果...</Typography></Box>;
+        return (
+            <Box className="page-container-new-ui" sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                <CircularProgress />
+                <Typography sx={{color: 'white', ml: 2}}>正在计算比牌结果...</Typography>
+            </Box>
+        );
     }
-
-    const { scores, details } = comparisonResult;
+    
+    // 从正确的结果中解构数据
+    const { scores, details, players } = comparisonResult;
 
     const sortedPlayers = [...players].sort((a, b) => {
         if (a.id === 'player') return -1;
@@ -97,7 +106,7 @@ function ComparisonPage() {
             
             <Stack direction="row" spacing={2} justifyContent="center" sx={{ mt: { xs: 2, sm: 3 } }}>
                 <Button variant="contained" size="large" color="success" onClick={() => startGame(players.length)}>再来一局</Button>
-                <Button variant="outlined" size="large" color="warning" onClick={() => navigate('/')}>退出游戏</Button>
+                <Button variant="outlined" size="large" color="warning" onClick={() => navigate('/')}>退出游戏</Button>。
             </Stack>
         </Box>
     );

@@ -96,18 +96,24 @@ export const isValidHand = (hand, position) => {
     return true;
 };
 
-export const isValidSetup = (front, middle, back) => {
+// Renaming and exporting the validation function
+export const validateArrangement = (rows) => {
+  const { front, middle, back } = rows;
   if (!isValidHand(front, 'front') || !isValidHand(middle, 'middle') || !isValidHand(back, 'back')) {
-    return false;
+    return { isValid: false, message: '牌墩数量不正确' };
   }
   
-  const frontType = getHandType(front);
-  const middleType = getHandType(middle);
-  const backType = getHandType(back);
+  const frontComparison = compareHands(middle, front);
+  if (frontComparison <= 0) {
+      return { isValid: false, message: '中道必须大于头道' };
+  }
   
-  if (!frontType || !middleType || !backType) return false;
+  const middleComparison = compareHands(back, middle);
+  if (middleComparison <= 0) {
+      return { isValid: false, message: '尾道必须大于中道' };
+  }
 
-  return compareHands(middle, front) > 0 && compareHands(back, middle) > 0;
+  return { isValid: true };
 };
 
 
@@ -236,7 +242,7 @@ export const findBestCombination = (cards) => {
 
             const frontHand = remainingAfterBack.filter(c => !middleHand.some(mh => mh.id === c.id));
             
-            if (isValidSetup(frontHand, middleHand, backHand)) {
+            if (validateArrangement({front: frontHand, middle: middleHand, back: backHand}).isValid) {
                 const frontType = getHandType(frontHand);
                 if (!frontType) continue;
 
@@ -264,4 +270,30 @@ export const findBestCombination = (cards) => {
     }
 
     return bestSetup;
+};
+
+// Also, let's make sure `calculateTotalScore` is exported if it exists, or create it if needed.
+// Based on the context, it seems to be missing. Let's add it.
+
+export const calculateTotalScore = (playerA, playerB) => {
+    let totalScoreA = 0;
+    const details = [];
+
+    ['front', 'middle', 'back'].forEach(row => {
+        const handA = playerA.rows[row];
+        const handB = playerB.rows[row];
+        const comparison = compareHands(handA, handB);
+        let points = 0;
+        
+        if (comparison > 0) points = 1;
+        if (comparison < 0) points = -1;
+        
+        // Special hand scoring logic would go here if needed.
+        // This is a simplified version.
+        
+        totalScoreA += points;
+        details.push({ row, winner: comparison > 0 ? 'A' : (comparison < 0 ? 'B' : 'Tie'), points });
+    });
+
+    return { totalScoreA, totalScoreB: -totalScoreA, details };
 };

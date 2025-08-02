@@ -5,9 +5,9 @@ import {
     sortEightGameCardsByRank, 
     evaluateEightGameHand,
     checkForEightGameSpecialHand,
-    calculateEightGameTotalScore, // Keep this for now, might need it
+    calculateEightGameTotalScore,
     compareEightGameHands,
-    EIGHT_GAME_HAND_TYPES // Import for new logic
+    EIGHT_GAME_HAND_TYPES
 } from '../utils/eightLogic';
 
 const EightGameContext = createContext();
@@ -18,6 +18,7 @@ export const useEightGame = () => {
     return context;
 };
 
+// ... (Helper functions like dealCardsForEightGame, SUIT_NAMES, RANK_NAMES remain the same) ...
 const SUIT_NAMES = { S: 'spades', H: 'hearts', C: 'clubs', D: 'diamonds' };
 const RANK_NAMES = {
     'A': 'ace', 'K': 'king', 'Q': 'queen', 'J': 'jack',
@@ -44,16 +45,9 @@ const dealCardsForEightGame = () => {
     return hands;
 };
 
-// Extracted from eightLogic.js to be used here, to avoid circular dependencies if needed later
 const getHandScore = (winningHand, area) => {
     const type = winningHand.type;
-
-    if (area === 'front') {
-        if (type === EIGHT_GAME_HAND_TYPES.PAIR) {
-            return winningHand.highCards[0] + 2;
-        }
-        return 1;
-    }
+    if (area === 'front') return (type === EIGHT_GAME_HAND_TYPES.PAIR) ? winningHand.highCards[0] + 2 : 1;
     if (area === 'middle') {
         if (type === EIGHT_GAME_HAND_TYPES.STRAIGHT_FLUSH) return 10;
         if (type === EIGHT_GAME_HAND_TYPES.THREE_OF_A_KIND) return 6;
@@ -66,7 +60,6 @@ const getHandScore = (winningHand, area) => {
     }
     return 1;
 };
-
 
 export const EightGameProvider = ({ children }) => {
     const [players, setPlayers] = useState([]);
@@ -134,12 +127,21 @@ export const EightGameProvider = ({ children }) => {
     const confirmSpecialHand = () => {
         if (!specialHand) return;
         const { player, handInfo } = specialHand;
-        const scores = players.map(p => ({
-            playerId: p.id,
-            name: p.name,
-            totalScore: p.id === player.id ? handInfo.score * (players.length - 1) : -handInfo.score
-        }));
-        setComparisonResult({ scores, players, specialWinner: player });
+        const matchupScores = {};
+        players.forEach(p => {
+            if (p.id !== player.id) {
+                matchupScores[p.id] = -handInfo.score;
+            }
+        });
+        matchupScores[player.id] = handInfo.score * (players.length - 1);
+
+        setComparisonResult({ 
+            matchupScores, 
+            players, 
+            specialWinner: player, 
+            details: null, // No details for special hands
+            handInfo: handInfo
+        });
         setSpecialHand(null);
     };
 
@@ -165,48 +167,42 @@ export const EightGameProvider = ({ children }) => {
             }
         }));
 
-        let scores = finalPlayers.map(p => ({ playerId: p.id, name: p.name, totalScore: 0 }));
         let details = {};
-        finalPlayers.forEach(p => {
-            details[p.id] = {
-                front: { handEval: evaluatedPlayers.find(ep => ep.id === p.id).evaluatedRows.front, points: 0 },
-                middle: { handEval: evaluatedPlayers.find(ep => ep.id === p.id).evaluatedRows.middle, points: 0 },
-                back: { handEval: evaluatedPlayers.find(ep => ep.id === p.id).evaluatedRows.back, points: 0 },
-            };
-        });
+        finalPlayers.forEach(p => { details[p.id] = { front: { points: 0 }, middle: { points: 0 }, back: { points: 0 }}; });
 
         for (let i = 0; i < evaluatedPlayers.length; i++) {
             for (let j = i + 1; j < evaluatedPlayers.length; j++) {
                 const playerA = evaluatedPlayers[i];
                 const playerB = evaluatedPlayers[j];
-
                 ['front', 'middle', 'back'].forEach(area => {
                     const handA = playerA.evaluatedRows[area];
                     const handB = playerB.evaluatedRows[area];
                     const comparison = compareEightGameHands(handA, handB);
-                    
                     if (comparison !== 0) {
                         const winnerHand = comparison > 0 ? handA : handB;
                         const areaScore = getHandScore(winnerHand, area);
-                        
-                        if (comparison > 0) { // A wins
-                            details[playerA.id][area].points += areaScore;
-                            details[playerB.id][area].points -= areaScore;
-                        } else { // B wins
-                            details[playerB.id][area].points += areaScore;
-                            details[playerA.id][area].points -= areaScore;
-                        }
+                        details[playerA.id][area].points += (comparison > 0 ? areaScore : -areaScore);
+                        details[playerB.id][area].points += (comparison < 0 ? areaScore : -areaScore);
                     }
                 });
             }
         }
 
-        scores.forEach(score => {
-            const playerDetails = details[score.playerId];
-            score.totalScore = playerDetails.front.points + playerDetails.middle.points + playerDetails.back.points;
+        // --- 新增：计算玩家与每个AI的单挑得分 ---
+        const matchupScores = {};
+        const humanPlayer = finalPlayers.find(p => p.id === 'player');
+        let humanPlayerTotalScore = 0;
+        
+        finalPlayers.forEach(opponent => {
+            if (opponent.id === 'player') return;
+            const result = calculateEightGameTotalScore(humanPlayer.rows, opponent.rows);
+            matchupScores[opponent.id] = result.playerBScore; // AI的分数
+            humanPlayerTotalScore += result.playerAScore;
         });
+        matchupScores['player'] = humanPlayerTotalScore;
+        // --- 计算结束 ---
 
-        setComparisonResult({ scores, players: finalPlayers, details });
+        setComparisonResult({ matchupScores, players: finalPlayers, details });
     };
 
     const value = {

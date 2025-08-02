@@ -1,44 +1,97 @@
-import React from 'react';
-import { Box, Typography, Button, Grid } from '@mui/material';
+import React, { useEffect } from 'react';
+import { Box, Typography, Button, Grid, Paper, Stack, Divider } from '@mui/material';
 import { useGame } from '../context/GameContext';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import ThirteenCompactHandDisplay from '../components/ThirteenCompactHandDisplay';
+import { getHandType } from '../utils/thirteenLogic'; // Import this to show hand types
 
-function ComparisonPage() {
-    const { players, startGame } = useGame();
-    const navigate = useNavigate();
+const PlayerComparisonCard = ({ player, details, matchupScore }) => {
+    if (matchupScore === undefined) return null;
+
+    const getPointColor = (points) => {
+        if (points > 0) return 'success.light';
+        if (points < 0) return 'error.light';
+        return 'text.secondary';
+    };
 
     return (
-        <Box className="page-container-new-ui" sx={{ display: 'flex', flexDirection: 'column', height: '100vh', p: 1, boxSizing: 'border-box' }}>
-            <Box sx={{ flexGrow: 1, overflowY: 'auto', pb: '80px' }}>
-                <Grid container spacing={1} justifyContent="center">
-                    {players.map(p => (
-                        <Grid item xs={6} sm={6} key={p.id}>
-                            <Box sx={{ p: 1, background: 'rgba(0,0,0,0.2)', borderRadius: 2, border: '1px solid rgba(255,255,255,0.15)', height: '100%' }}>
-                                <Typography variant="subtitle2" align="center" sx={{ fontWeight: 'bold', color: 'white' }}>{p.name}</Typography>
-                                <ThirteenCompactHandDisplay hand={p.rows.front || []} />
-                                <ThirteenCompactHandDisplay hand={p.rows.middle || []} />
-                                <ThirteenCompactHandDisplay hand={p.rows.back || []} />
-                            </Box>
-                        </Grid>
-                    ))}
-                </Grid>
-            </Box>
-            <Box sx={{
-                position: 'fixed',
-                bottom: 0,
-                left: 0,
-                right: 0,
-                p: 2,
-                background: 'rgba(0, 0, 0, 0.5)',
-                backdropFilter: 'blur(10px)',
-                textAlign: 'center',
-                borderTop: '1px solid rgba(255, 255, 255, 0.1)'
-            }}>
-                <Button variant="contained" onClick={startGame} sx={{ mr: 2 }}>再来一局</Button>
-                <Button variant="outlined" component={Link} to="/thirteen/play" sx={{ mr: 2 }}>返回游戏</Button>
-                <Button variant="outlined" onClick={() => navigate('/')}>返回大厅</Button>
-            </Box>
+        <Paper elevation={3} sx={{ p: 1, backgroundColor: 'rgba(0, 0, 0, 0.3)', color: 'white', height: '100%' }}>
+            <Stack direction="row" justifyContent="space-between" alignItems="center">
+                <Typography variant="h6">{player.name}</Typography>
+                <Typography variant="h6" sx={{ color: getPointColor(matchupScore), fontWeight: 'bold' }}>
+                    {matchupScore > 0 ? `+${matchupScore}` : matchupScore}
+                </Typography>
+            </Stack>
+            <Divider sx={{ my: 1, borderColor: 'rgba(255,255,255,0.2)' }} />
+            
+            {['front', 'middle', 'back'].map(area => {
+                const handEval = getHandType(player.rows[area]);
+                const pointDetails = player.id === 'player' 
+                    ? details[player.id] && Object.values(details[player.id]).map(d => d.find(x => x.row === area)?.points || 0).reduce((a,b) => a+b, 0)
+                    : details[player.id] && details[player.id][player.id]?.find(x => x.row === area)?.points || 0;
+
+                return (
+                    <Box key={area} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', my: 0.5 }}>
+                        <Box>
+                            <ThirteenCompactHandDisplay hand={player.rows[area]} />
+                            <Typography variant="caption" sx={{ fontSize: '0.7rem', color: 'lightgray' }}>
+                                {handEval?.type} {handEval?.isSpecial ? `(+${handEval.points})` : ''}
+                            </Typography>
+                        </Box>
+                        {details && (
+                             <Typography sx={{ fontWeight: 'bold', color: getPointColor(pointDetails) }}>
+                                {pointDetails > 0 ? `+${pointDetails}` : pointDetails}
+                            </Typography>
+                        )}
+                    </Box>
+                )
+            })}
+        </Paper>
+    );
+};
+
+function ComparisonPage() {
+    const { players, startGame, comparisonResult, startComparison } = useGame();
+    const navigate = useNavigate();
+
+    useEffect(() => {
+        // Automatically start comparison when the page loads
+        if (!comparisonResult) {
+            startComparison();
+        }
+    }, [comparisonResult, startComparison]);
+
+    if (!comparisonResult) {
+        return <Box className="page-container-new-ui"><Typography sx={{color: 'white'}}>正在计算比牌结果...</Typography></Box>;
+    }
+
+    const { matchupScores, details } = comparisonResult;
+    const humanPlayer = players.find(p => p.id === 'player');
+    const aiPlayers = players.filter(p => p.id !== 'player');
+
+    return (
+        <Box className="page-container-new-ui" sx={{ p: { xs: 1, sm: 2 }, overflowY: 'auto' }}>
+            <Typography variant="h4" align="center" gutterBottom sx={{ fontWeight: 'bold', color: 'white' }}>
+                比牌结果
+            </Typography>
+
+            <Grid container spacing={{ xs: 1, sm: 2 }}>
+                {humanPlayer && (
+                    <Grid item xs={6} md={3}>
+                        <PlayerComparisonCard player={humanPlayer} details={details} matchupScore={matchupScores[humanPlayer.id]} />
+                    </Grid>
+                )}
+                {aiPlayers.map(player => (
+                    <Grid item xs={6} md={3} key={player.id}>
+                        <PlayerComparisonCard player={player} details={details} matchupScore={matchupScores[player.id]} />
+                    </Grid>
+                ))}
+            </Grid>
+            
+            <Stack direction="row" spacing={2} justifyContent="center" sx={{ mt: { xs: 2, sm: 3 } }}>
+                <Button variant="contained" size="large" color="success" onClick={startGame}>再来一局</Button>
+                <Button variant="outlined" size="large" color="warning" onClick={() => navigate('/')}>退出游戏</Button>
+            </Stack>
         </Box>
     );
 }

@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext, useCallback, useEffect, useRef } from 'react';
+import React, { createContext, useState, useContext, useCallback, useEffect } from 'react';
 import { 
     getAIEightGameBestArrangement, 
     validateEightGameArrangement, 
@@ -18,7 +18,6 @@ export const useEightGame = () => {
     return context;
 };
 
-// A robust way to create a deep copy of an object
 const deepCopy = (obj) => JSON.parse(JSON.stringify(obj));
 
 const dealCardsForEightGame = (numPlayers = 6) => {
@@ -54,10 +53,7 @@ export const EightGameProvider = ({ children }) => {
                 isReady: false
             };
 
-            if (id === 'player') {
-                player.rows.middle = hand;
-                player.hand = [];
-            } else { 
+            if (id.startsWith('ai')) { 
                 const handIds = player.hand.map(c => c.id);
                 const bestRowsIds = getAIEightGameBestArrangement(handIds);
                 player.rows = {
@@ -67,6 +63,9 @@ export const EightGameProvider = ({ children }) => {
                 };
                 player.hand = [];
                 player.isReady = true;
+            } else { // Player
+                player.rows.middle = hand;
+                player.hand = [];
             }
             return player;
         });
@@ -93,7 +92,7 @@ export const EightGameProvider = ({ children }) => {
             const playerToUpdate = newPlayers.find(p => p.id === playerId);
             if (playerToUpdate) {
                 playerToUpdate.rows = newRows;
-                playerToUpdate.isReady = false; // Reset readiness until validated
+                playerToUpdate.isReady = false; 
             }
             return newPlayers;
         });

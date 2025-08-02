@@ -9,7 +9,6 @@ import { createDeck } from '../../../utils/deck.js';
 const GameContext = createContext();
 export const useGame = () => useContext(GameContext);
 
-// A robust way to create a deep copy of an object
 const deepCopy = (obj) => JSON.parse(JSON.stringify(obj));
 
 const dealCards = (numPlayers = 4) => {
@@ -38,14 +37,8 @@ export const GameProvider = ({ children }) => {
                 rows: { front: [], middle: [], back: [] },
                 isReady: false
             };
-            if (playerInfo.id === 'player') {
-                playerInfo.rows = {
-                    front: hand.slice(0, 3),
-                    middle: hand.slice(3, 8),
-                    back: hand.slice(8, 13)
-                };
-                playerInfo.hand = [];
-            } else { // AI Players
+
+            if (playerInfo.id.startsWith('ai')) {
                 const handIds = playerInfo.hand.map(c => c.id);
                 const bestRowsIds = findBestCombination(handIds);
                 playerInfo.rows = {
@@ -55,6 +48,13 @@ export const GameProvider = ({ children }) => {
                 };
                 playerInfo.hand = [];
                 playerInfo.isReady = true;
+            } else { // Player
+                playerInfo.rows = {
+                    front: hand.slice(0, 3),
+                    middle: hand.slice(3, 8),
+                    back: hand.slice(8, 13)
+                };
+                playerInfo.hand = [];
             }
             return playerInfo;
         });

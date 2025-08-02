@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import ThirteenPlayerStatus from '../components/ThirteenPlayerStatus';
 import { ThirteenGameRow } from '../components/ThirteenGameRow';
 import { getAreaType } from '../utils/thirteenLogic';
-import ThirteenCompactHandDisplay from '../components/ThirteenCompactHandDisplay'; // Import the compact display
+import ThirteenCompactHandDisplay from '../components/ThirteenCompactHandDisplay';
 
 function ThirteenGamePage() {
     const { players, startGame, setPlayerArrangement, autoArrangePlayerHand, startComparison } = useGame();
@@ -91,12 +91,7 @@ function ThirteenGamePage() {
                 <Typography variant="h6" sx={{ color: 'white', textAlign: 'center', my: 1 }}>其他玩家</Typography>
                 <Stack spacing={2}>
                     {opponents.map(p => (
-                        <Box key={p.id}>
-                            <Typography sx={{ color: 'white', textAlign: 'center', fontWeight: 'bold' }}>{p.name}</Typography>
-                            <ThirteenCompactHandDisplay hand={p.rows.back} />
-                            <ThirteenCompactHandDisplay hand={p.rows.middle} />
-                            <ThirteenCompactHandDisplay hand={p.rows.front} />
-                        </Box>
+                       <ThirteenCompactHandDisplay key={p.id} player={p} />
                     ))}
                 </Stack>
             </Box>

@@ -1,17 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Typography, Button, CircularProgress, Stack, Grid } from '@mui/material';
+import { Box, Typography, Button, CircularProgress, Stack } from '@mui/material';
 import { useGame } from '../context/GameContext';
 import { useNavigate } from 'react-router-dom';
 import ThirteenPlayerStatus from '../components/ThirteenPlayerStatus';
 import { ThirteenGameRow } from '../components/ThirteenGameRow';
 import { getAreaType } from '../utils/thirteenLogic';
-import ThirteenCompactHandDisplay from '../components/ThirteenCompactHandDisplay';
 
 function ThirteenGamePage() {
     const { players, startGame, setPlayerArrangement, autoArrangePlayerHand, startComparison } = useGame();
     const navigate = useNavigate();
     const player = players.find(p => p.id === 'player');
-    const opponents = players.filter(p => p.id !== 'player');
     const myId = 'player';
     const [selectedCardIds, setSelectedCardIds] = useState([]);
     const [handTypes, setHandTypes] = useState({ front: '', middle: '', back: '' });
@@ -69,9 +67,9 @@ function ThirteenGamePage() {
 
     const { rows } = player;
     return (
-        <Box className="page-container-new-ui" sx={{ display: 'flex', flexDirection: 'row', gap: 2, height: '100%' }}>
-            {/* Player's Game Board */}
-            <Box className="game-board glass-effect" sx={{ flex: 3, display: 'flex', flexDirection: 'column' }}>
+        <Box className="page-container-new-ui">
+            {/* Main Game Board - takes full width */}
+            <Box className="game-board glass-effect">
                 <ThirteenPlayerStatus players={players} myId={myId} />
                 <Stack spacing={2} sx={{ flexGrow: 1, justifyContent: 'center' }}>
                     <ThirteenGameRow id="front" label="头道" cards={rows.front} onCardClick={handleCardClick} onRowClick={() => handleRowClick('front')} selectedCardIds={selectedCardIds} typeName={handTypes.front} />
@@ -83,16 +81,6 @@ function ThirteenGamePage() {
                     <Button variant="contained" color="primary" onClick={handleStartComparison} sx={{ mb: 1 }}>开始比牌</Button>
                     <Button variant="contained" color="success" onClick={() => startGame(players.length)} sx={{ mb: 1 }}>重新开始</Button>
                     <Button variant="outlined" color="warning" onClick={() => navigate('/')} sx={{ mb: 1 }}>返回大厅</Button>
-                </Stack>
-            </Box>
-
-            {/* Opponents' Hands Display */}
-            <Box sx={{ flex: 1, overflowY: 'auto' }}>
-                <Typography variant="h6" sx={{ color: 'white', textAlign: 'center', my: 1 }}>其他玩家</Typography>
-                <Stack spacing={2}>
-                    {opponents.map(p => (
-                       <ThirteenCompactHandDisplay key={p.id} player={p} />
-                    ))}
                 </Stack>
             </Box>
         </Box>

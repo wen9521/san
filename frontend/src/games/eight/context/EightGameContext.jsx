@@ -16,7 +16,6 @@ export const useEightGame = () => {
     return context;
 };
 
-// 发牌ID格式修正，和十三张/图片一致
 const SUIT_NAMES = { S: 'spades', H: 'hearts', C: 'clubs', D: 'diamonds' };
 const RANK_NAMES = {
     'A': 'ace', 'K': 'king', 'Q': 'queen', 'J': 'jack',
@@ -45,38 +44,46 @@ const dealCardsForEightGame = () => {
 
 export const EightGameProvider = ({ children }) => {
     const [players, setPlayers] = useState([]);
-    const [currentPlayer, setCurrentPlayer] = useState(null);
     const [isGameActive, setIsGameActive] = useState(false);
     const [comparisonResult, setComparisonResult] = useState(null);
-    const [specialHand, setSpecialHand] = useState(null);
+    const [specialHand, setSpecialHand] = useState(null); // { player, handInfo }
 
-    // Ref to prevent AI arrangement from running multiple times
     const aiArrangementStarted = useRef(false);
 
     const startGame = useCallback(() => {
+        aiArrangementStarted.current = false;
+        setComparisonResult(null);
+        setSpecialHand(null);
+
         const hands = dealCardsForEightGame();
         const playerNames = ['你', '小明', '小红', '小刚', '小强', '小黑'];
         const ids = ['player', 'ai1', 'ai2', 'ai3', 'ai4', 'ai5'];
 
         const playerList = ids.map((id, idx) => {
             const hand = sortEightGameCardsByRank(hands[idx]);
-            const initialRows = (id === 'player') 
-                ? { front: [], middle: hand, back: [] } 
+             const initialRows = (id === 'player') 
+                ? { front: [], middle: [], back: hand } 
                 : { front: [], middle: [], back: [] };
-
             return { id, name: playerNames[idx], hand, rows: initialRows, isReady: false };
         });
 
         setPlayers(playerList);
-        setCurrentPlayer(playerList[0]);
         setIsGameActive(true);
-        setComparisonResult(null);
-        setSpecialHand(null);
-        aiArrangementStarted.current = false;
+
+        // 检测玩家的特殊牌型
+        const player = playerList.find(p => p.id === 'player');
+        const detectedSpecialHand = checkForEightGameSpecialHand(player.hand);
+        if (detectedSpecialHand) {
+            setSpecialHand({ player, handInfo: detectedSpecialHand });
+        }
     }, []);
 
     useEffect(() => {
-        if (isGameActive && players.length > 0 && !aiArrangementStarted.current) {
+        startGame();
+    }, [startGame]);
+
+    useEffect(() => {
+        if (isGameActive && players.length > 0 && !aiArrangementStarted.current && !specialHand) {
             const aiPlayers = players.filter(p => p.id.startsWith('ai'));
             if (aiPlayers.length > 0) {
                 aiArrangementStarted.current = true;
@@ -90,11 +97,7 @@ export const EightGameProvider = ({ children }) => {
                 });
             }
         }
-    }, [isGameActive, players]);
-
-    useEffect(() => {
-        startGame();
-    }, [startGame]);
+    }, [isGameActive, players, specialHand]);
 
     const setPlayerArrangement = (playerId, newRows) => {
         setPlayers(prevPlayers =>
@@ -111,14 +114,40 @@ export const EightGameProvider = ({ children }) => {
         setPlayers(prev => prev.map(p => p.id === 'player' ? { ...p, rows: best, isReady: true } : p));
     };
 
-    const startComparison = () => {
-        let finalPlayers = players;
-        const player = finalPlayers.find(p => p.id === 'player');
-        if(player && !player.isReady) {
-            finalPlayers = finalPlayers.map(p => p.id === 'player' ? { ...p, isReady: true } : p);
-            setPlayers(finalPlayers);
-        }
+    const confirmSpecialHand = () => {
+        if (!specialHand) return;
         
+        const { player, handInfo } = specialHand;
+        
+        const scores = players.map(p => {
+            let totalScore = 0;
+            if (p.id === player.id) {
+                totalScore = handInfo.score * (players.length -1);
+            } else {
+                totalScore = -handInfo.score;
+            }
+            return { playerId: p.id, name: p.name, totalScore };
+        });
+
+        setComparisonResult({ scores, players });
+        setSpecialHand(null); // 清空特殊牌局，以防重复计算
+    };
+
+    const startComparison = () => {
+        let finalPlayers = players.map(p => {
+            if (p.id === 'player' && !p.isReady) {
+                const { isValid, message } = validateEightGameArrangement(p.rows);
+                if (!isValid) {
+                    alert(`你的牌型不合法: ${message}`);
+                    return null;
+                }
+                return { ...p, isReady: true };
+            }
+            return p;
+        });
+
+        if(finalPlayers.includes(null)) return { success: false, message: "牌型不合法" };
+
         if (!finalPlayers.every(p => p.isReady)) {
             return { success: false, message: "有玩家尚未准备好。" };
         }
@@ -136,9 +165,9 @@ export const EightGameProvider = ({ children }) => {
     };
 
     const value = {
-        players, currentPlayer, isGameActive, startGame, setPlayerArrangement,
+        players, isGameActive, startGame, setPlayerArrangement,
         autoArrangePlayerHand, startComparison, comparisonResult,
-        specialHand, setSpecialHand
+        specialHand, setSpecialHand, confirmSpecialHand
     };
 
     return <EightGameContext.Provider value={value}>{children}</EightGameContext.Provider>;

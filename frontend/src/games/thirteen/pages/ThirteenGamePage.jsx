@@ -26,7 +26,7 @@ function ThirteenGamePage() {
     }, [player]);
 
     if (!player) {
-        return <Box className="page-container-new-ui" sx={{justifyContent: 'center', alignItems: 'center'}}><CircularProgress /><Typography sx={{color: 'white', mt: 2}}>正在创建十三张牌局...</Typography></Box>;
+        return <Box className="page-container-new-ui" sx={{justifyContent: 'center', alignItems: 'center'}}><CircularProgress /><Typography sx={{color: 'white', mt: 2}}>正在加载...</Typography></Box>;
     }
 
     const handleCardClick = (cardId) => {

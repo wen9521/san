@@ -1,143 +1,115 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Box, Typography, Button, Stack, CircularProgress, Grid } from '@mui/material';
-import { useNavigate } from 'react-router-dom';
+import React, { useState } from 'react';
+import { Box, Button, CircularProgress, Typography, Stack, Grid } from '@mui/material';
+import { useEightGame } from '../context/EightGameContext';
 import EightPlayerStatus from '../components/EightPlayerStatus';
 import { EightGameRow } from '../components/EightGameRow';
+import EightSpecialHandDialog from '../components/EightSpecialHandDialog'; // 引入组件
 import EightCompactHandDisplay from '../components/EightCompactHandDisplay';
-import EightSpecialHandDialog from '../components/EightSpecialHandDialog';
-import { useEightGame } from '../context/EightGameContext';
-import { sortEightGameCardsByRank, checkForEightGameSpecialHand, evaluateEightGameHand, getHandTypeName } from '../utils/eightLogic';
 
 function EightGamePage() {
     const {
-        players, isGameActive, startGame, setPlayerArrangement,
-        autoArrangePlayerHand, startComparison, comparisonResult,
-        specialHand, setSpecialHand
+        players,
+        startGame,
+        setPlayerArrangement,
+        autoArrangePlayerHand,
+        startComparison,
+        comparisonResult,
+        specialHand,       // 新增：获取特殊牌局信息
+        confirmSpecialHand // 新增：确认特殊牌局的方法
     } = useEightGame();
     
-    const navigate = useNavigate();
-    const [selectedCardIds, setSelectedCardIds] = useState([]);
-    const [handTypes, setHandTypes] = useState({ front: '', middle: '', back: '' });
+    const player = players.find(p => p.id === 'player');
     const myId = 'player';
-    const player = players.find(p => p.id === myId);
+    const [selectedCardIds, setSelectedCardIds] = useState([]);
+    const [isSpecialHandDialogOpen, setIsSpecialHandDialogOpen] = useState(true);
 
-    useEffect(() => {
-        if (!isGameActive) startGame();
-    }, [isGameActive, startGame]);
-    
-    useEffect(() => {
-        if (player?.hand?.length === 8) {
-            const detected = checkForEightGameSpecialHand(player.hand);
-            setSpecialHand(detected ? { name: detected.name } : null);
-        }
-    }, [player?.hand, setSpecialHand]);
-
-    useEffect(() => {
-        if (player && player.rows) {
-            setHandTypes({
-                front: getHandTypeName(evaluateEightGameHand(player.rows.front)),
-                middle: getHandTypeName(evaluateEightGameHand(player.rows.middle)),
-                back: getHandTypeName(evaluateEightGameHand(player.rows.back)),
-            });
-        }
-    }, [player, player?.rows]);
-
-    const handleCardClick = useCallback((cardId) => {
-        setSelectedCardIds(prev => prev.includes(cardId) ? prev.filter(id => id !== cardId) : [...prev, cardId]);
-    }, []);
-
-    const handleRowClick = useCallback((targetRowId) => {
-        if (selectedCardIds.length === 0 || !player) return;
-        
-        let newRows = JSON.parse(JSON.stringify(player.rows));
-        const allCardsInRows = [...newRows.front, ...newRows.middle, ...newRows.back];
-        
-        const movedCards = allCardsInRows.filter(c => selectedCardIds.includes(c.id));
-        
-        for (let row in newRows) {
-            newRows[row] = newRows[row].filter(c => !selectedCardIds.includes(c.id));
-        }
-
-        newRows[targetRowId].push(...movedCards);
-        newRows[targetRowId] = sortEightGameCardsByRank(newRows[targetRowId]);
-        
-        setPlayerArrangement(myId, newRows);
-        setSelectedCardIds([]);
-    }, [selectedCardIds, player, setPlayerArrangement, myId]);
-
-    const handleAutoArrange = () => {
-        if (!player) return;
-        autoArrangePlayerHand();
-        setSelectedCardIds([]);
-    };
-
-    const handleStartComparison = () => {
-        const result = startComparison();
-        if (!result.success) alert(result.message || "所有玩家未准备好");
-    };
-    
     if (!player) {
-        return <Box className="page-container-new-ui" sx={{justifyContent: 'center', alignItems: 'center'}}><CircularProgress /><Typography sx={{color: 'white', mt: 2}}>正在创建八张牌局...</Typography></Box>;
+        return <Box className="page-container-new-ui" sx={{ justifyContent: 'center', alignItems: 'center' }}><CircularProgress /><Typography sx={{ color: 'white', mt: 2 }}>正在创建八张牌局...</Typography></Box>;
     }
     
     if (comparisonResult) {
         return (
-            <Box className="page-container-new-ui" sx={{ display: 'flex', flexDirection: 'column', height: '100vh', p: 1 }}>
-                <Box sx={{ flexGrow: 1, overflowY: 'auto', pb: '80px' }}>
-                    <Grid container spacing={1} justifyContent="center">
-                        {comparisonResult.players.map(p => {
-                            const scoreObj = comparisonResult.scores.find(s => s.playerId === p.id) || {};
-                            return (
-                                <Grid item xs={4} sm={4} md={4} key={p.id}>
-                                    <Box sx={{ p: 1, background: 'rgba(0,0,0,0.2)', borderRadius: 2, border: scoreObj.totalScore > 0 ? '1px solid #4caf50' : (scoreObj.totalScore < 0 ? '1px solid #f44336' : '1px solid rgba(255,255,255,0.15)'), height: '100%'}}>
-                                        <Typography variant="caption" align="center" component="div" sx={{ fontWeight: 'bold', color: 'white' }}>{p.name}</Typography>
-                                        <Typography align="center" sx={{ color: scoreObj.totalScore > 0 ? '#66bb6a' : (scoreObj.totalScore < 0 ? '#ef5350' : 'white'), fontWeight: 'bold', fontSize: '0.9rem' }}>
-                                            {scoreObj.totalScore > 0 ? `+${scoreObj.totalScore}` : scoreObj.totalScore}
-                                        </Typography>
-                                        <EightCompactHandDisplay hand={p.rows.front || []} />
-                                        <EightCompactHandDisplay hand={p.rows.middle || []} />
-                                        <EightCompactHandDisplay hand={p.rows.back || []} />
-                                    </Box>
-                                </Grid>
-                            );
-                        })}
-                    </Grid>
-                </Box>
-                <Box sx={{
-                    position: 'fixed',
-                    bottom: 0,
-                    left: 0,
-                    right: 0,
-                    p: 2,
-                    background: 'rgba(0, 0, 0, 0.5)',
-                    backdropFilter: 'blur(10px)',
-                    textAlign: 'center',
-                    borderTop: '1px solid rgba(255, 255, 255, 0.1)'
-                }}>
-                    <Button variant="contained" size="medium" onClick={startGame} sx={{ mr: 2 }}>再来一局</Button>
-                    <Button variant="outlined" size="medium" onClick={() => navigate('/')}>返回大厅</Button>
-                </Box>
+            <Box className="page-container-new-ui" sx={{ justifyContent: 'center', alignItems: 'center', color: 'white' }}>
+                <Typography variant="h4">比牌结果</Typography>
+                {comparisonResult.scores.map(score => (
+                    <Typography key={score.playerId}>{score.name}: {score.totalScore}分</Typography>
+                ))}
+                <Button variant="contained" onClick={startGame} sx={{ mt: 2 }}>再来一局</Button>
             </Box>
         );
     }
-    
+
+    const handleCardClick = (cardId) => {
+        setSelectedCardIds(prev =>
+            prev.includes(cardId) ? prev.filter(id => id !== cardId) : [...prev, cardId]
+        );
+    };
+
+    const handleRowClick = (targetRowId) => {
+        if (selectedCardIds.length === 0 || !player) return;
+
+        let newRows = JSON.parse(JSON.stringify(player.rows));
+        // 从所有墩中移除选中的牌
+        Object.keys(newRows).forEach(rowKey => {
+            newRows[rowKey] = newRows[rowKey].filter(c => !selectedCardIds.includes(c.id));
+        });
+
+        // 添加到目标墩
+        const cardsToMove = player.hand.filter(c => selectedCardIds.includes(c.id));
+        newRows[targetRowId].push(...cardsToMove);
+        
+        setPlayerArrangement(myId, newRows);
+        setSelectedCardIds([]);
+    };
+
+    const handleConfirmSpecial = () => {
+        confirmSpecialHand();
+        setIsSpecialHandDialogOpen(false);
+    };
+
+    const handleCancelSpecial = () => {
+        setIsSpecialHandDialogOpen(false);
+    };
+
     const { rows } = player;
+
     return (
         <Box className="page-container-new-ui">
-            <Box className="game-board glass-effect">
-                <EightPlayerStatus players={players} myId={myId} />
-                <Stack spacing={2} sx={{ flexGrow: 1, justifyContent: 'center' }}>
-                    <EightGameRow id="front" label="头道 (2)" cards={rows.front} onCardClick={handleCardClick} onRowClick={handleRowClick} selectedCardIds={selectedCardIds} typeName={handTypes.front} />
-                    <EightGameRow id="middle" label="中道 (3)" cards={rows.middle} onCardClick={handleCardClick} onRowClick={handleRowClick} selectedCardIds={selectedCardIds} typeName={handTypes.middle} />
-                    <EightGameRow id="back" label="尾道 (3)" cards={rows.back} onCardClick={handleCardClick} onRowClick={handleRowClick} selectedCardIds={selectedCardIds} typeName={handTypes.back} />
-                </Stack>
-                <Stack direction="row" spacing={1} justifyContent="center" sx={{ p: 1, flexWrap: 'wrap' }}>
-                    <Button variant="contained" color="secondary" onClick={handleAutoArrange} sx={{ mb: 1 }}>智能分牌</Button>
-                    <Button variant="contained" color="success" onClick={handleStartComparison} sx={{ mb: 1 }}>开始比牌</Button>
-                    <Button variant="outlined" color="warning" onClick={() => navigate('/')} sx={{ mb: 1 }}>返回大厅</Button>
-                </Stack>
-                <EightSpecialHandDialog open={!!specialHand} specialHandName={specialHand?.name} onClose={() => setSpecialHand(null)} onConfirm={() => setSpecialHand(null)} />
-            </Box>
+             {specialHand && (
+                <EightSpecialHandDialog
+                    open={isSpecialHandDialogOpen}
+                    specialHand={specialHand.handInfo}
+                    onConfirm={handleConfirmSpecial}
+                    onCancel={handleCancelSpecial}
+                />
+            )}
+            <Grid container spacing={1} sx={{ height: '100%'}}>
+                <Grid item xs={12} md={9} sx={{ display: 'flex', flexDirection: 'column'}}>
+                     <Box className="game-board glass-effect">
+                        <EightPlayerStatus players={players} myId={myId} />
+                        <Stack spacing={2} sx={{ flexGrow: 1, justifyContent: 'center' }}>
+                            <EightGameRow id="front" label="头道(2张)" cards={rows.front} onCardClick={handleCardClick} onRowClick={handleRowClick} selectedCardIds={selectedCardIds} />
+                            <EightGameRow id="middle" label="中道(3张)" cards={rows.middle} onCardClick={handleCardClick} onRowClick={handleRowClick} selectedCardIds={selectedCardIds} />
+                            <EightGameRow id="back" label="尾道(3张)" cards={rows.back} onCardClick={handleCardClick} onRowClick={handleRowClick} selectedCardIds={selectedCardIds} />
+                        </Stack>
+                        <Stack direction="row" spacing={1} justifyContent="center" sx={{ p: 1, flexWrap: 'wrap' }}>
+                            <Button variant="contained" color="secondary" onClick={autoArrangePlayerHand}>智能分牌</Button>
+                            <Button variant="contained" color="primary" onClick={startComparison}>开始比牌</Button>
+                            <Button variant="contained" color="success" onClick={startGame}>重新开始</Button>
+                        </Stack>
+                    </Box>
+                </Grid>
+                <Grid item xs={12} md={3}>
+                    <Box className="glass-effect" sx={{ p: 1, height: '100%' }}>
+                        <Typography variant="h6" align="center" sx={{ color: 'white' }}>其他玩家</Typography>
+                        <Stack spacing={1} sx={{ mt: 1 }}>
+                            {players.filter(p => p.id !== myId).map(p => (
+                                <EightCompactHandDisplay key={p.id} player={p} />
+                            ))}
+                        </Stack>
+                    </Box>
+                </Grid>
+            </Grid>
         </Box>
     );
 }

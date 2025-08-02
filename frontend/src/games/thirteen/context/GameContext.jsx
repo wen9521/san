@@ -8,72 +8,75 @@ const RANK_NAMES = {
     '5': '5', '4': '4', '3': '3', '2': '2'
 };
 
-const GameContext = createContext();
+const FULL_DECK = [];
+for (const suit of ['S', 'H', 'C', 'D']) {
+    for (const rank of ['2', '3', '4', '5', '6', '7', '8', '9', 'T', 'J', 'Q', 'K', 'A']) {
+        const rankName = RANK_NAMES[rank];
+        const suitName = SUIT_NAMES[suit];
+        FULL_DECK.push({ id: `${rankName}_of_${suitName}`, suit, rank });
+    }
+}
 
+const GameContext = createContext();
 export const useGame = () => useContext(GameContext);
 
 const dealCards = () => {
-    const suits = ['S', 'H', 'C', 'D'];
-    const ranks = ['2', '3', '4', '5', '6', '7', '8', '9', 'T', 'J', 'Q', 'K', 'A'];
-    let deck = [];
-    for (const suit of suits) {
-        for (const rank of ranks) {
-            const rankName = RANK_NAMES[rank];
-            const suitName = SUIT_NAMES[suit];
-            deck.push({ id: `${rankName}_of_${suitName}`, suit, rank });
-        }
-    }
-    deck.sort(() => Math.random() - 0.5);
+    const deck = [...FULL_DECK].sort(() => Math.random() - 0.5);
     return [deck.slice(0, 13), deck.slice(13, 26), deck.slice(26, 39), deck.slice(39, 52)];
 };
 
 export const GameProvider = ({ children }) => {
     const [players, setPlayers] = useState([]);
     const [isGameActive, setIsGameActive] = useState(false);
-    const [comparisonResult, setComparisonResult] = useState(null);
 
     const startGame = useCallback(() => {
-        const [playerHandRaw, aiHand1, aiHand2, aiHand3] = dealCards();
-        const playerHand = sortCards(playerHandRaw);
+        const [playerHandRaw, aiHand1Raw, aiHand2Raw, aiHand3Raw] = dealCards();
         
-        setPlayers([
-            { 
-                id: 'player', 
-                name: '你', 
-                hand: playerHand, 
-                rows: { 
-                    front: playerHand.slice(0, 3), 
-                    middle: playerHand.slice(3, 8), 
-                    back: playerHand.slice(8, 13) 
-                }, 
-                isReady: false 
+        const initialPlayers = [
+            {
+                id: 'player', name: '你', hand: sortCards(playerHandRaw),
+                rows: { front: playerHandRaw.slice(0, 3), middle: playerHandRaw.slice(3, 8), back: playerHandRaw.slice(8, 13) },
+                isReady: false
             },
-            { 
-                id: 'ai1', 
-                name: '电脑1', 
-                hand: sortCards(aiHand1), 
-                rows: findBestCombination(aiHand1), 
-                isReady: true 
+            {
+                id: 'ai1', name: '电脑1', hand: sortCards(aiHand1Raw),
+                rows: { front: aiHand1Raw.slice(0, 3), middle: aiHand1Raw.slice(3, 8), back: aiHand1Raw.slice(8, 13) },
+                isReady: false
             },
-            { 
-                id: 'ai2', 
-                name: '电脑2', 
-                hand: sortCards(aiHand2), 
-                rows: findBestCombination(aiHand2), 
-                isReady: true 
+            {
+                id: 'ai2', name: '电脑2', hand: sortCards(aiHand2Raw),
+                rows: { front: aiHand2Raw.slice(0, 3), middle: aiHand2Raw.slice(3, 8), back: aiHand2Raw.slice(8, 13) },
+                isReady: false
             },
-            { 
-                id: 'ai3', 
-                name: '电脑3', 
-                hand: sortCards(aiHand3), 
-                rows: findBestCombination(aiHand3), 
-                isReady: true 
+            {
+                id: 'ai3', name: '电脑3', hand: sortCards(aiHand3Raw),
+                rows: { front: aiHand3Raw.slice(0, 3), middle: aiHand3Raw.slice(3, 8), back: aiHand3Raw.slice(8, 13) },
+                isReady: false
             }
-        ]);
+        ];
+        
+        setPlayers(initialPlayers);
         setIsGameActive(true);
-        setComparisonResult(null);
     }, []);
 
+    useEffect(() => {
+        if (isGameActive) {
+            const aiPlayers = ['ai1', 'ai2', 'ai3'];
+            aiPlayers.forEach((aiId, index) => {
+                setTimeout(() => {
+                    setPlayers(prev => {
+                        const playerToUpdate = prev.find(p => p.id === aiId);
+                        if (playerToUpdate) {
+                            const bestRows = findBestCombination(playerToUpdate.hand);
+                            return prev.map(p => p.id === aiId ? { ...p, rows: bestRows, isReady: true } : p);
+                        }
+                        return prev;
+                    });
+                }, (index + 1) * 2000);
+            });
+        }
+    }, [isGameActive]);
+    
     useEffect(() => {
         startGame();
     }, [startGame]);
@@ -83,13 +86,17 @@ export const GameProvider = ({ children }) => {
     };
 
     const autoArrangePlayerHand = () => {
-        const player = players.find(p => p.id === 'player');
-        if (!player || !player.hand) return;
-        const bestRows = findBestCombination(player.hand);
-        setPlayerArrangement('player', bestRows);
+        setPlayers(prev => {
+            const playerToUpdate = prev.find(p => p.id === 'player');
+            if (playerToUpdate) {
+                const bestRows = findBestCombination(playerToUpdate.hand);
+                return prev.map(p => p.id === 'player' ? { ...p, rows: bestRows, isReady: true } : p);
+            }
+            return prev;
+        });
     };
 
-    const value = { players, isGameActive, startGame, setPlayerArrangement, autoArrangePlayerHand, comparisonResult, setComparisonResult };
+    const value = { players, isGameActive, startGame, setPlayerArrangement, autoArrangePlayerHand };
 
     return <GameContext.Provider value={value}>{children}</GameContext.Provider>;
 };

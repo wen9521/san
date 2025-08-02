@@ -10,6 +10,10 @@ const RoomSelectionPage = () => {
     navigate('/');
   };
 
+  const handlePlay = () => {
+    navigate('/thirteen/play');
+  };
+
   return (
     <Box
       sx={{
@@ -40,7 +44,7 @@ const RoomSelectionPage = () => {
           </Typography>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             {[1, 2, 5, 10, 20].map((score) => (
-              <Button key={`normal-${score}`} variant="contained" sx={{ justifyContent: 'space-between', p: 2, background: 'rgba(255,255,255,0.1)' }}>
+              <Button key={`normal-${score}`} onClick={handlePlay} variant="contained" sx={{ justifyContent: 'space-between', p: 2, background: 'rgba(255,255,255,0.1)' }}>
                 <Typography>底分: {score}</Typography>
                 <Typography>在线: {Math.floor(Math.random() * 200)}</Typography>
               </Button>
@@ -55,7 +59,7 @@ const RoomSelectionPage = () => {
           </Typography>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
              {[1, 2, 5, 10, 20].map((score) => (
-              <Button key={`double-${score}`} variant="contained" sx={{ justifyContent: 'space-between', p: 2, background: 'rgba(255,255,255,0.1)' }}>
+              <Button key={`double-${score}`} onClick={handlePlay} variant="contained" sx={{ justifyContent: 'space-between', p: 2, background: 'rgba(255,255,255,0.1)' }}>
                 <Typography>底分: {score}</Typography>
                 <Typography>在线: {Math.floor(Math.random() * 50)}</Typography>
               </Button>

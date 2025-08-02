@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Button, CircularProgress, Typography, Stack } from '@mui/material';
+import { Box, Button, CircularProgress, Typography, Stack, Grid } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { useEightGame } from '../context/EightGameContext';
 import EightPlayerStatus from '../components/EightPlayerStatus';
 import { EightGameRow } from '../components/EightGameRow';
 import EightSpecialHandBanner from '../components/EightSpecialHandBanner';
 import EightComparisonDisplay from '../components/EightComparisonDisplay';
+import EightCompactHandDisplay from '../components/EightCompactHandDisplay';
 
 function EightGamePage() {
     const {
@@ -21,6 +22,7 @@ function EightGamePage() {
     
     const navigate = useNavigate();
     const player = players.find(p => p.id === 'player');
+    const opponents = players.filter(p => p.id !== 'player');
     const myId = 'player';
     const [selectedCardIds, setSelectedCardIds] = useState([]);
     const [showSpecialHandBanner, setShowSpecialHandBanner] = useState(false);
@@ -49,19 +51,14 @@ function EightGamePage() {
         if (selectedCardIds.length === 0 || !player) return;
 
         const newRows = JSON.parse(JSON.stringify(player.rows));
-        
-        // 【重要修正】: 只在牌道(rows)中查找和移动牌
         const allCardsInRows = [...newRows.front, ...newRows.middle, ...newRows.back];
         const cardsToMove = allCardsInRows.filter(c => selectedCardIds.includes(c.id));
 
         if (cardsToMove.length === 0) return;
 
-        // 从所有道中移除这些牌
         newRows.front = newRows.front.filter(c => !selectedCardIds.includes(c.id));
         newRows.middle = newRows.middle.filter(c => !selectedCardIds.includes(c.id));
         newRows.back = newRows.back.filter(c => !selectedCardIds.includes(c.id));
-
-        // 添加到目标道
         newRows[targetRowId].push(...cardsToMove);
         
         setPlayerArrangement(myId, newRows);
@@ -84,22 +81,34 @@ function EightGamePage() {
                     onCancel={handleCancelSpecial}
                 />
             )}
-            <Box className="game-board glass-effect">
-                <EightPlayerStatus players={players} myId={myId} />
-                <Stack spacing={2} sx={{ flexGrow: 1, justifyContent: 'center', p: 1 }}>
-                    <EightGameRow id="front" label="头道(2张)" cards={rows.front} onCardClick={handleCardClick} onRowClick={createRowClickHandler('front')} selectedCardIds={selectedCardIds} />
-                    <EightGameRow id="middle" label="中道(3张)" cards={rows.middle} onCardClick={handleCardClick} onRowClick={createRowClickHandler('middle')} selectedCardIds={selectedCardIds} />
-                    <EightGameRow id="back" label="尾道(3张)" cards={rows.back} onCardClick={handleCardClick} onRowClick={createRowClickHandler('back')} selectedCardIds={selectedCardIds} />
-                </Stack>
-                
-                {/* 【重要修正】: 移除手牌显示区域 */}
+            <Box sx={{ display: 'flex', flexDirection: 'row', gap: 2, height: '100%' }}>
+                {/* Player's Game Board */}
+                <Box className="game-board glass-effect" sx={{ flex: 3, display: 'flex', flexDirection: 'column' }}>
+                    <EightPlayerStatus players={players} myId={myId} />
+                    <Stack spacing={2} sx={{ flexGrow: 1, justifyContent: 'center', p: 1 }}>
+                        <EightGameRow id="front" label="头道(2张)" cards={rows.front} onCardClick={handleCardClick} onRowClick={createRowClickHandler('front')} selectedCardIds={selectedCardIds} />
+                        <EightGameRow id="middle" label="中道(3张)" cards={rows.middle} onCardClick={handleCardClick} onRowClick={createRowClickHandler('middle')} selectedCardIds={selectedCardIds} />
+                        <EightGameRow id="back" label="尾道(3张)" cards={rows.back} onCardClick={handleCardClick} onRowClick={createRowClickHandler('back')} selectedCardIds={selectedCardIds} />
+                    </Stack>
+                    <Stack direction="row" spacing={1} justifyContent="center" sx={{ p: 1, flexWrap: 'wrap' }}>
+                        <Button variant="contained" color="secondary" onClick={autoArrangePlayerHand}>智能分牌</Button>
+                        <Button variant="contained" color="primary" onClick={startComparison}>开始比牌</Button>
+                        <Button variant="contained" color="success" onClick={() => startGame(players.length)}>重新开始</Button>
+                        <Button variant="outlined" color="warning" onClick={() => navigate('/')}>返回大厅</Button>
+                    </Stack>
+                </Box>
 
-                <Stack direction="row" spacing={1} justifyContent="center" sx={{ p: 1, flexWrap: 'wrap' }}>
-                    <Button variant="contained" color="secondary" onClick={autoArrangePlayerHand}>智能分牌</Button>
-                    <Button variant="contained" color="primary" onClick={startComparison}>开始比牌</Button>
-                    <Button variant="contained" color="success" onClick={() => startGame(players.length)}>重新开始</Button>
-                    <Button variant="outlined" color="warning" onClick={() => navigate('/')}>返回大厅</Button>
-                </Stack>
+                {/* Opponents' Hands Display */}
+                <Box sx={{ flex: 1, overflowY: 'auto' }}>
+                    <Typography variant="h6" sx={{ color: 'white', textAlign: 'center', my: 1 }}>其他玩家</Typography>
+                    <Grid container spacing={1}>
+                        {opponents.map(p => (
+                            <Grid item xs={12} key={p.id}>
+                                <EightCompactHandDisplay player={p} />
+                            </Grid>
+                        ))}
+                    </Grid>
+                </Box>
             </Box>
         </Box>
     );

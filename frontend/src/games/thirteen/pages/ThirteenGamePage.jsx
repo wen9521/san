@@ -1,16 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Typography, Button, CircularProgress, Stack } from '@mui/material';
+import { Box, Typography, Button, CircularProgress, Stack, Grid } from '@mui/material';
 import { useGame } from '../context/GameContext';
 import { useNavigate } from 'react-router-dom';
 import ThirteenPlayerStatus from '../components/ThirteenPlayerStatus';
 import { ThirteenGameRow } from '../components/ThirteenGameRow';
 import { getAreaType } from '../utils/thirteenLogic';
-import PointsDialog from '../components/PointsDialog';
+import ThirteenCompactHandDisplay from '../components/ThirteenCompactHandDisplay'; // Import the compact display
 
 function ThirteenGamePage() {
-    const { players, startGame, setPlayerArrangement, autoArrangePlayerHand, startComparison } = useGame(); // 获取 startComparison
+    const { players, startGame, setPlayerArrangement, autoArrangePlayerHand, startComparison } = useGame();
     const navigate = useNavigate();
     const player = players.find(p => p.id === 'player');
+    const opponents = players.filter(p => p.id !== 'player');
     const myId = 'player';
     const [selectedCardIds, setSelectedCardIds] = useState([]);
     const [handTypes, setHandTypes] = useState({ front: '', middle: '', back: '' });
@@ -61,60 +62,42 @@ function ThirteenGamePage() {
         setSelectedCardIds([]);
     };
     
-    // 【修复】: 创建一个新的处理函数
     const handleStartComparison = () => {
-        startComparison(); // 先调用 context 中的计算函数
-        navigate('/thirteen/comparison'); // 再进行页面跳转
+        startComparison();
+        navigate('/thirteen/comparison');
     };
 
     const { rows } = player;
     return (
-        <Box className="page-container-new-ui">
-            <Box className="game-board glass-effect">
+        <Box className="page-container-new-ui" sx={{ display: 'flex', flexDirection: 'row', gap: 2, height: '100%' }}>
+            {/* Player's Game Board */}
+            <Box className="game-board glass-effect" sx={{ flex: 3, display: 'flex', flexDirection: 'column' }}>
                 <ThirteenPlayerStatus players={players} myId={myId} />
                 <Stack spacing={2} sx={{ flexGrow: 1, justifyContent: 'center' }}>
-                    <ThirteenGameRow
-                        id="front"
-                        label="头道"
-                        cards={rows.front}
-                        onCardClick={handleCardClick}
-                        onRowClick={() => handleRowClick('front')}
-                        selectedCardIds={selectedCardIds}
-                        typeName={handTypes.front}
-                    />
-                    <ThirteenGameRow
-                        id="middle"
-                        label="中道"
-                        cards={rows.middle}
-                        onCardClick={handleCardClick}
-                        onRowClick={() => handleRowClick('middle')}
-                        selectedCardIds={selectedCardIds}
-                        typeName={handTypes.middle}
-                    />
-                    <ThirteenGameRow
-                        id="back"
-                        label="尾道"
-                        cards={rows.back}
-                        onCardClick={handleCardClick}
-                        onRowClick={() => handleRowClick('back')}
-                        selectedCardIds={selectedCardIds}
-                        typeName={handTypes.back}
-                    />
+                    <ThirteenGameRow id="front" label="头道" cards={rows.front} onCardClick={handleCardClick} onRowClick={() => handleRowClick('front')} selectedCardIds={selectedCardIds} typeName={handTypes.front} />
+                    <ThirteenGameRow id="middle" label="中道" cards={rows.middle} onCardClick={handleCardClick} onRowClick={() => handleRowClick('middle')} selectedCardIds={selectedCardIds} typeName={handTypes.middle} />
+                    <ThirteenGameRow id="back" label="尾道" cards={rows.back} onCardClick={handleCardClick} onRowClick={() => handleRowClick('back')} selectedCardIds={selectedCardIds} typeName={handTypes.back} />
                 </Stack>
                 <Stack direction="row" spacing={1} justifyContent="center" sx={{ p: 1, flexWrap: 'wrap' }}>
-                    <Button variant="contained" color="secondary" onClick={handleAutoArrange} sx={{ mb: 1 }}>
-                        智能分牌
-                    </Button>
-                    {/* 【修复】: 修改按钮，移除 component 和 to 属性，使用 onClick */}
-                    <Button variant="contained" color="primary" onClick={handleStartComparison} sx={{ mb: 1 }}>
-                        开始比牌
-                    </Button>
-                    <Button variant="contained" color="success" onClick={() => startGame(players.length)} sx={{ mb: 1 }}>
-                        重新开始
-                    </Button>
-                    <Button variant="outlined" color="warning" onClick={() => navigate('/')} sx={{ mb: 1 }}>
-                        返回大厅
-                    </Button>
+                    <Button variant="contained" color="secondary" onClick={handleAutoArrange} sx={{ mb: 1 }}>智能分牌</Button>
+                    <Button variant="contained" color="primary" onClick={handleStartComparison} sx={{ mb: 1 }}>开始比牌</Button>
+                    <Button variant="contained" color="success" onClick={() => startGame(players.length)} sx={{ mb: 1 }}>重新开始</Button>
+                    <Button variant="outlined" color="warning" onClick={() => navigate('/')} sx={{ mb: 1 }}>返回大厅</Button>
+                </Stack>
+            </Box>
+
+            {/* Opponents' Hands Display */}
+            <Box sx={{ flex: 1, overflowY: 'auto' }}>
+                <Typography variant="h6" sx={{ color: 'white', textAlign: 'center', my: 1 }}>其他玩家</Typography>
+                <Stack spacing={2}>
+                    {opponents.map(p => (
+                        <Box key={p.id}>
+                            <Typography sx={{ color: 'white', textAlign: 'center', fontWeight: 'bold' }}>{p.name}</Typography>
+                            <ThirteenCompactHandDisplay hand={p.rows.back} />
+                            <ThirteenCompactHandDisplay hand={p.rows.middle} />
+                            <ThirteenCompactHandDisplay hand={p.rows.front} />
+                        </Box>
+                    ))}
                 </Stack>
             </Box>
         </Box>

@@ -1,9 +1,8 @@
 import React, { createContext, useState, useContext, useCallback, useEffect } from 'react';
 import { 
     findBestCombination, 
-    sortCards, 
-    calculateTotalScore, 
-    validateArrangement 
+    validateArrangement,
+    calcSSSAllScores
 } from '../utils/thirteenLogic.js';
 
 const SUIT_NAMES = { S: 'spades', H: 'hearts', C: 'clubs', D: 'diamonds' };
@@ -25,9 +24,13 @@ for (const suit of ['S', 'H', 'C', 'D']) {
 const GameContext = createContext();
 export const useGame = () => useContext(GameContext);
 
-const dealCards = () => {
+const dealCards = (numPlayers = 4) => {
     const deck = [...FULL_DECK].sort(() => Math.random() - 0.5);
-    return [deck.slice(0, 13), deck.slice(13, 26), deck.slice(26, 39), deck.slice(39, 52)];
+    const hands = [];
+    for(let i = 0; i < numPlayers; i++) {
+        hands.push(deck.slice(i * 13, (i + 1) * 13));
+    }
+    return hands;
 };
 
 export const GameProvider = ({ children }) => {
@@ -35,49 +38,55 @@ export const GameProvider = ({ children }) => {
     const [isGameActive, setIsGameActive] = useState(false);
     const [comparisonResult, setComparisonResult] = useState(null);
 
-    const startGame = useCallback(() => {
+    const startGame = useCallback((numPlayers = 4) => {
         setComparisonResult(null);
-        const [playerHandRaw, aiHand1Raw, aiHand2Raw, aiHand3Raw] = dealCards();
+        const hands = dealCards(numPlayers);
         
-        // Correctly split the player's hand into 3-5-5 stacks from the start.
-        const initialPlayers = [
-            { 
-                id: 'player', 
-                name: '你', 
-                hand: sortCards(playerHandRaw),
-                rows: { 
-                    front: playerHandRaw.slice(0, 3), 
-                    middle: playerHandRaw.slice(3, 8), 
-                    back: playerHandRaw.slice(8, 13) 
-                }, 
-                isReady: false 
-            },
-            { id: 'ai1', name: '电脑1', hand: sortCards(aiHand1Raw), rows: { front: [], middle: [], back: [] }, isReady: false },
-            { id: 'ai2', name: '电脑2', hand: sortCards(aiHand2Raw), rows: { front: [], middle: [], back: [] }, isReady: false },
-            { id: 'ai3', name: '电脑3', hand: sortCards(aiHand3Raw), rows: { front: [], middle: [], back: [] }, isReady: false }
-        ];
+        const initialPlayers = hands.map((hand, index) => {
+            if (index === 0) {
+                return { 
+                    id: 'player', 
+                    name: '你', 
+                    hand: hand.map(c => c.id), // Store card IDs
+                    rows: { 
+                        front: hand.slice(0, 3).map(c=>c.id), 
+                        middle: hand.slice(3, 8).map(c=>c.id), 
+                        back: hand.slice(8, 13).map(c=>c.id)
+                    }, 
+                    isReady: false 
+                };
+            }
+            return {
+                id: `ai${index}`,
+                name: `电脑${index}`,
+                hand: hand.map(c => c.id),
+                rows: { front: [], middle: [], back: [] },
+                isReady: false
+            };
+        });
         
         setPlayers(initialPlayers);
         setIsGameActive(true);
     }, []);
 
     useEffect(() => {
-        if (isGameActive) {
-            const aiPlayers = ['ai1', 'ai2', 'ai3'];
-            aiPlayers.forEach((aiId, index) => {
-                setTimeout(() => {
-                    setPlayers(prev => {
-                        const playerToUpdate = prev.find(p => p.id === aiId);
-                        if (playerToUpdate) {
-                            const bestRows = findBestCombination(playerToUpdate.hand);
-                            return prev.map(p => p.id === aiId ? { ...p, rows: bestRows, isReady: true } : p);
-                        }
-                        return prev;
-                    });
-                }, (index + 1) * 1000);
+        if (isGameActive && players.length > 0) {
+            players.forEach(player => {
+                if (player.id.startsWith('ai')) {
+                    setTimeout(() => {
+                        setPlayers(prev => {
+                            const playerToUpdate = prev.find(p => p.id === player.id);
+                            if (playerToUpdate) {
+                                const bestRows = findBestCombination(playerToUpdate.hand);
+                                return prev.map(p => p.id === player.id ? { ...p, rows: bestRows, isReady: true } : p);
+                            }
+                            return prev;
+                        });
+                    }, 500); // Stagger AI arrangement
+                }
             });
         }
-    }, [isGameActive]);
+    }, [isGameActive, players.length]);
     
     useEffect(() => { startGame(); }, [startGame]);
 
@@ -91,7 +100,7 @@ export const GameProvider = ({ children }) => {
             const playerToUpdate = prev.find(p => p.id === 'player');
             if (playerToUpdate) {
                 const bestRows = findBestCombination(playerToUpdate.hand);
-                return prev.map(p => p.id === 'player' ? { ...p, rows: bestRows, isReady: true } : p);
+                setPlayerArrangement('player', bestRows);
             }
             return prev;
         });
@@ -99,36 +108,20 @@ export const GameProvider = ({ children }) => {
 
     const startComparison = () => {
         const player = players.find(p => p.id === 'player');
-        if (!player.isReady) {
-            const { isValid, message } = validateArrangement(player.rows);
-            if (!isValid) {
-                alert(`你的牌型不合法: ${message}`);
-                return;
-            }
+        if (!player) return;
+
+        const { isValid, message } = validateArrangement(player.rows);
+        if (!isValid) {
+            alert(`你的牌型不合法: ${message}`);
+            return;
         }
 
-        const finalPlayers = players.map(p => ({...p, isReady: true}));
+        const finalPlayers = players.map(p => ({ ...p, isReady: true }));
         setPlayers(finalPlayers);
-
-        const humanPlayer = finalPlayers.find(p => p.id === 'player');
-        const aiPlayers = finalPlayers.filter(p => p.id !== 'player');
         
-        const matchupScores = {};
-        let humanPlayerTotalScore = 0;
-
-        const details = {};
-        finalPlayers.forEach(p => { details[p.id] = {}; });
-
-        aiPlayers.forEach(opponent => {
-            const result = calculateTotalScore(humanPlayer, opponent);
-            matchupScores[opponent.id] = result.totalScoreB;
-            humanPlayerTotalScore += result.totalScoreA;
-            details[humanPlayer.id][opponent.id] = result.details;
-            details[opponent.id][humanPlayer.id] = result.details.map(d => ({...d, points: -d.points}));
-        });
-        matchupScores['player'] = humanPlayerTotalScore;
-
-        setComparisonResult({ matchupScores, players: finalPlayers, details });
+        // Use the new simplified scoring function
+        const results = calcSSSAllScores(finalPlayers);
+        setComparisonResult(results);
     };
 
     const value = { players, isGameActive, startGame, setPlayerArrangement, autoArrangePlayerHand, comparisonResult, startComparison };

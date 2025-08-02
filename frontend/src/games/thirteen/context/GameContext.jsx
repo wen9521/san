@@ -9,6 +9,9 @@ import { createDeck } from '../../../utils/deck.js';
 const GameContext = createContext();
 export const useGame = () => useContext(GameContext);
 
+// A robust way to create a deep copy of an object
+const deepCopy = (obj) => JSON.parse(JSON.stringify(obj));
+
 const dealCards = (numPlayers = 4) => {
     const deck = createDeck().sort(() => Math.random() - 0.5);
     const hands = [];
@@ -63,48 +66,49 @@ export const GameProvider = ({ children }) => {
     useEffect(() => { startGame(); }, [startGame]);
 
     const setPlayerArrangement = (playerId, newRows) => {
-        const cardIdsInRows = {
-            front: newRows.front.map(c => c.id),
-            middle: newRows.middle.map(c => c.id),
-            back: newRows.back.map(c => c.id),
-        };
-        const { isValid } = validateArrangement(cardIdsInRows);
-        setPlayers(prev => prev.map(p => p.id === playerId ? { ...p, rows: newRows, isReady: isValid } : p));
+        setPlayers(prev => {
+            const newPlayers = deepCopy(prev);
+            const playerToUpdate = newPlayers.find(p => p.id === playerId);
+            if (playerToUpdate) {
+                playerToUpdate.rows = newRows;
+                const cardIdsInRows = {
+                    front: newRows.front.map(c => c.id),
+                    middle: newRows.middle.map(c => c.id),
+                    back: newRows.back.map(c => c.id),
+                };
+                const { isValid } = validateArrangement(cardIdsInRows);
+                playerToUpdate.isReady = isValid;
+            }
+            return newPlayers;
+        });
     };
 
     const autoArrangePlayerHand = () => {
         setPlayers(prev => {
-            const playerToUpdate = prev.find(p => p.id === 'player');
+            const newPlayers = deepCopy(prev);
+            const playerToUpdate = newPlayers.find(p => p.id === 'player');
             if (playerToUpdate) {
                 const allCards = [...playerToUpdate.rows.front, ...playerToUpdate.rows.middle, ...playerToUpdate.rows.back];
                 const allCardIds = allCards.map(c => c.id);
 
                 const bestRowsIds = findBestCombination(allCardIds);
 
-                const bestRowsWithObjects = {
+                playerToUpdate.rows = {
                     front: bestRowsIds.front.map(id => allCards.find(card => card.id === id)),
                     middle: bestRowsIds.middle.map(id => allCards.find(card => card.id === id)),
                     back: bestRowsIds.back.map(id => allCards.find(card => card.id === id)),
                 };
-                return prev.map(p => p.id === 'player' ? { ...p, rows: bestRowsWithObjects, hand: [], isReady: true } : p);
+                playerToUpdate.hand = [];
+                playerToUpdate.isReady = true;
             }
-            return prev;
+            return newPlayers;
         });
     };
 
     const startComparison = () => {
         const player = players.find(p => p.id === 'player');
-        if (!player) return;
-
-        const playerRowsAsIds = {
-            front: player.rows.front.map(c => c.id),
-            middle: player.rows.middle.map(c => c.id),
-            back: player.rows.back.map(c => c.id),
-        };
-
-        const { isValid, message } = validateArrangement(playerRowsAsIds);
-        if (!isValid) {
-            alert(`你的牌型不合法: ${message}`);
+        if (!player || !player.isReady) {
+            alert('你的牌型不合法，请重新摆牌！');
             return;
         }
 
@@ -118,8 +122,7 @@ export const GameProvider = ({ children }) => {
         }));
 
         const results = calcSSSAllScores(playersWithRowsAsIds);
-        
-        results.players = players; 
+        results.players = deepCopy(players); 
         
         setComparisonResult(results);
     };

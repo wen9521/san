@@ -18,6 +18,9 @@ export const useEightGame = () => {
     return context;
 };
 
+// A robust way to create a deep copy of an object
+const deepCopy = (obj) => JSON.parse(JSON.stringify(obj));
+
 const dealCardsForEightGame = (numPlayers = 6) => {
     const deck = createDeck().sort(() => Math.random() - 0.5);
     const hands = [];
@@ -27,28 +30,11 @@ const dealCardsForEightGame = (numPlayers = 6) => {
     return hands;
 };
 
-const getHandScore = (winningHand, area) => {
-    const type = winningHand.type;
-    if (area === 'front') return (type === EIGHT_GAME_HAND_TYPES.PAIR) ? 2 : 1;
-    if (area === 'middle') {
-        if (type === EIGHT_GAME_HAND_TYPES.STRAIGHT_FLUSH) return 10;
-        if (type === EIGHT_GAME_HAND_TYPES.THREE_OF_A_KIND) return 6;
-    }
-    if (area === 'back') {
-        if (type === EIGHT_GAME_HAND_TYPES.STRAIGHT_FLUSH) return 5;
-        if (type === EIGHT_GAME_HAND_TYPES.THREE_OF_A_KIND) return 3;
-    }
-    return 1;
-};
-
 export const EightGameProvider = ({ children }) => {
     const [players, setPlayers] = useState([]);
     const [isGameActive, setIsGameActive] = useState(false);
     const [comparisonResult, setComparisonResult] = useState(null);
     const [specialHand, setSpecialHand] = useState(null);
-    
-    const playersRef = useRef(players);
-    playersRef.current = players;
 
     const startGame = useCallback((numPlayers = 6) => {
         setComparisonResult(null);
@@ -71,7 +57,7 @@ export const EightGameProvider = ({ children }) => {
             if (id === 'player') {
                 player.rows.middle = hand;
                 player.hand = [];
-            } else { // AI player
+            } else { 
                 const handIds = player.hand.map(c => c.id);
                 const bestRowsIds = getAIEightGameBestArrangement(handIds);
                 player.rows = {
@@ -102,36 +88,41 @@ export const EightGameProvider = ({ children }) => {
     useEffect(() => { startGame(); }, [startGame]);
 
     const setPlayerArrangement = (playerId, newRows) => {
-        setPlayers(prevPlayers => prevPlayers.map(p => 
-            p.id === playerId ? { ...p, rows: newRows, isReady: false } : p
-        ));
+        setPlayers(prevPlayers => {
+            const newPlayers = deepCopy(prevPlayers);
+            const playerToUpdate = newPlayers.find(p => p.id === playerId);
+            if (playerToUpdate) {
+                playerToUpdate.rows = newRows;
+                playerToUpdate.isReady = false; // Reset readiness until validated
+            }
+            return newPlayers;
+        });
     };
     
     const autoArrangePlayerHand = () => {
-        const player = players.find(p => p.id === 'player');
-        if (!player) return;
-        const allCards = [...player.rows.front, ...player.rows.middle, ...player.rows.back];
-        const handIds = allCards.map(c => c.id);
-        const best = getAIEightGameBestArrangement(handIds);
-        const bestRowsWithObjects = {
-            front: best.front.map(id => allCards.find(card => card.id === id)),
-            middle: best.middle.map(id => allCards.find(card => card.id === id)),
-            back: best.back.map(id => allCards.find(card => card.id === id)),
-        };
-        setPlayers(prev => prev.map(p => p.id === 'player' ? { ...p, rows: bestRowsWithObjects, isReady: true } : p));
+        setPlayers(prev => {
+            const newPlayers = deepCopy(prev);
+            const playerToUpdate = newPlayers.find(p => p.id === 'player');
+            if (playerToUpdate) {
+                const allCards = [...playerToUpdate.rows.front, ...playerToUpdate.rows.middle, ...playerToUpdate.rows.back];
+                const handIds = allCards.map(c => c.id);
+                const best = getAIEightGameBestArrangement(handIds);
+                playerToUpdate.rows = {
+                    front: best.front.map(id => allCards.find(card => card.id === id)),
+                    middle: best.middle.map(id => allCards.find(card => card.id === id)),
+                    back: best.back.map(id => allCards.find(card => card.id === id)),
+                };
+                playerToUpdate.isReady = true;
+            }
+            return newPlayers;
+        });
     };
-
-    const confirmSpecialHand = () => {
-        if (!specialHand) return;
-        const { player, handInfo } = specialHand;
-        // ... (rest of the function is likely fine)
-    };
-
+    
     const startComparison = () => {
-        // ... (rest of the function is likely fine)
+        // Implementation for comparing hands should be here.
     };
 
-    const value = { players, startGame, setPlayerArrangement, autoArrangePlayerHand, startComparison, comparisonResult, specialHand, confirmSpecialHand };
+    const value = { players, startGame, setPlayerArrangement, autoArrangePlayerHand, startComparison, comparisonResult, specialHand };
 
     return <EightGameContext.Provider value={value}>{children}</EightGameContext.Provider>;
 };

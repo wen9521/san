@@ -4,28 +4,14 @@ import {
     validateArrangement,
     calcSSSAllScores
 } from '../utils/thirteenLogic.js';
-
-const SUIT_NAMES = { S: 'spades', H: 'hearts', C: 'clubs', D: 'diamonds' };
-const RANK_NAMES = {
-    'A': 'ace', 'K': 'king', 'Q': 'queen', 'J': 'jack',
-    'T': '10', '9': '9', '8': '8', '7': '7', '6': '6',
-    '5': '5', '4': '4', '3': '3', '2': '2'
-};
-
-const FULL_DECK = [];
-for (const suit of ['S', 'H', 'C', 'D']) {
-    for (const rank of ['2', '3', '4', '5', '6', '7', '8', '9', 'T', 'J', 'Q', 'K', 'A']) {
-        const rankName = RANK_NAMES[rank];
-        const suitName = SUIT_NAMES[suit];
-        FULL_DECK.push({ id: `${rankName}_of_${suitName}`, suit, rank });
-    }
-}
+import { createDeck } from '../../../utils/deck.js'; // 【路径修正】
 
 const GameContext = createContext();
 export const useGame = () => useContext(GameContext);
 
+// 使用新的deck工具来发牌
 const dealCards = (numPlayers = 4) => {
-    const deck = [...FULL_DECK].sort(() => Math.random() - 0.5);
+    const deck = createDeck().sort(() => Math.random() - 0.5);
     const hands = [];
     for(let i = 0; i < numPlayers; i++) {
         hands.push(deck.slice(i * 13, (i + 1) * 13));
@@ -43,55 +29,69 @@ export const GameProvider = ({ children }) => {
         const hands = dealCards(numPlayers);
         
         const initialPlayers = hands.map((hand, index) => {
-            if (index === 0) {
-                return { 
-                    id: 'player', 
-                    name: '你', 
-                    hand: hand.map(c => c.id), // Store card IDs
-                    rows: { 
-                        front: hand.slice(0, 3).map(c=>c.id), 
-                        middle: hand.slice(3, 8).map(c=>c.id), 
-                        back: hand.slice(8, 13).map(c=>c.id)
-                    }, 
-                    isReady: false 
-                };
-            }
-            return {
-                id: `ai${index}`,
-                name: `电脑${index}`,
-                hand: hand.map(c => c.id),
+            const playerInfo = {
+                id: index === 0 ? 'player' : `ai${index}`,
+                name: index === 0 ? '你' : `电脑${index}`,
+                hand: hand, // 【重要修正】: 存储完整的卡牌对象
                 rows: { front: [], middle: [], back: [] },
                 isReady: false
             };
+            if (playerInfo.id === 'player') {
+                // 初始化时，将牌直接放入三道中（作为对象）
+                playerInfo.rows = {
+                    front: hand.slice(0, 3),
+                    middle: hand.slice(3, 8),
+                    back: hand.slice(8, 13)
+                };
+                 // 玩家手牌应为空，因为所有牌都在牌道里
+                playerInfo.hand = [];
+            }
+            return playerInfo;
         });
         
         setPlayers(initialPlayers);
         setIsGameActive(true);
     }, []);
 
+    // AI 自动理牌逻辑
     useEffect(() => {
         if (isGameActive && players.length > 0) {
-            players.forEach(player => {
-                if (player.id.startsWith('ai')) {
-                    setTimeout(() => {
-                        setPlayers(prev => {
-                            const playerToUpdate = prev.find(p => p.id === player.id);
-                            if (playerToUpdate) {
-                                const bestRows = findBestCombination(playerToUpdate.hand);
-                                return prev.map(p => p.id === player.id ? { ...p, rows: bestRows, isReady: true } : p);
+            const aiPlayersToUpdate = players.filter(p => p.id.startsWith('ai') && p.hand.length > 0);
+
+            if (aiPlayersToUpdate.length > 0) {
+                setTimeout(() => {
+                    setPlayers(prevPlayers => {
+                        const newPlayers = [...prevPlayers];
+                        aiPlayersToUpdate.forEach(player => {
+                            const handIds = player.hand.map(c => c.id);
+                            const bestRowsIds = findBestCombination(handIds);
+                            const bestRowsWithObjects = {
+                                front: bestRowsIds.front.map(id => player.hand.find(card => card.id === id)),
+                                middle: bestRowsIds.middle.map(id => player.hand.find(card => card.id === id)),
+                                back: bestRowsIds.back.map(id => player.hand.find(card => card.id === id)),
+                            };
+                            
+                            const playerIndex = newPlayers.findIndex(p => p.id === player.id);
+                            if (playerIndex !== -1) {
+                                newPlayers[playerIndex] = { ...newPlayers[playerIndex], rows: bestRowsWithObjects, hand: [], isReady: true };
                             }
-                            return prev;
                         });
-                    }, 500); // Stagger AI arrangement
-                }
-            });
+                        return newPlayers;
+                    });
+                }, 500);
+            }
         }
-    }, [isGameActive, players.length]);
+    }, [isGameActive, players]);
     
     useEffect(() => { startGame(); }, [startGame]);
 
     const setPlayerArrangement = (playerId, newRows) => {
-        const {isValid} = validateArrangement(newRows);
+        const cardIdsInRows = {
+            front: newRows.front.map(c => c.id),
+            middle: newRows.middle.map(c => c.id),
+            back: newRows.back.map(c => c.id),
+        };
+        const { isValid } = validateArrangement(cardIdsInRows);
         setPlayers(prev => prev.map(p => p.id === playerId ? { ...p, rows: newRows, isReady: isValid } : p));
     };
 
@@ -99,8 +99,18 @@ export const GameProvider = ({ children }) => {
         setPlayers(prev => {
             const playerToUpdate = prev.find(p => p.id === 'player');
             if (playerToUpdate) {
-                const bestRows = findBestCombination(playerToUpdate.hand);
-                setPlayerArrangement('player', bestRows);
+                // AI理牌逻辑需要所有牌，所以合并各道牌
+                const allCards = [...playerToUpdate.rows.front, ...playerToUpdate.rows.middle, ...playerToUpdate.rows.back];
+                const allCardIds = allCards.map(c => c.id);
+
+                const bestRowsIds = findBestCombination(allCardIds);
+
+                const bestRowsWithObjects = {
+                    front: bestRowsIds.front.map(id => allCards.find(card => card.id === id)),
+                    middle: bestRowsIds.middle.map(id => allCards.find(card => card.id === id)),
+                    back: bestRowsIds.back.map(id => allCards.find(card => card.id === id)),
+                };
+                return prev.map(p => p.id === 'player' ? { ...p, rows: bestRowsWithObjects, hand: [], isReady: true } : p);
             }
             return prev;
         });
@@ -110,17 +120,32 @@ export const GameProvider = ({ children }) => {
         const player = players.find(p => p.id === 'player');
         if (!player) return;
 
-        const { isValid, message } = validateArrangement(player.rows);
+        const playerRowsAsIds = {
+            front: player.rows.front.map(c => c.id),
+            middle: player.rows.middle.map(c => c.id),
+            back: player.rows.back.map(c => c.id),
+        };
+
+        const { isValid, message } = validateArrangement(playerRowsAsIds);
         if (!isValid) {
             alert(`你的牌型不合法: ${message}`);
             return;
         }
 
-        const finalPlayers = players.map(p => ({ ...p, isReady: true }));
-        setPlayers(finalPlayers);
+        const playersWithRowsAsIds = players.map(p => ({
+            ...p,
+            rows: {
+                front: p.rows.front.map(c => c.id),
+                middle: p.rows.middle.map(c => c.id),
+                back: p.rows.back.map(c => c.id),
+            }
+        }));
+
+        const results = calcSSSAllScores(playersWithRowsAsIds);
         
-        // Use the new simplified scoring function
-        const results = calcSSSAllScores(finalPlayers);
+        // 【重要】将完整的玩家对象（包含卡牌对象）传递给比牌结果，以便于渲染
+        results.players = players; 
+        
         setComparisonResult(results);
     };
 

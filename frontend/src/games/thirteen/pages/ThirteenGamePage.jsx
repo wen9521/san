@@ -4,7 +4,7 @@ import { useGame } from '../context/GameContext';
 import { Link, useNavigate } from 'react-router-dom';
 import ThirteenPlayerStatus from '../components/ThirteenPlayerStatus';
 import { ThirteenGameRow } from '../components/ThirteenGameRow';
-import { getHandType } from '../utils/thirteenLogic';
+import { getAreaType } from '../utils/thirteenLogic';
 import PointsDialog from '../components/PointsDialog';
 
 function ThirteenGamePage() {
@@ -18,9 +18,9 @@ function ThirteenGamePage() {
     useEffect(() => {
         if (player && player.rows) {
             setHandTypes({
-                front: getHandType(player.rows.front)?.type,
-                middle: getHandType(player.rows.middle)?.type,
-                back: getHandType(player.rows.back)?.type,
+                front: getAreaType(player.rows.front, 'head'),
+                middle: getAreaType(player.rows.middle, 'middle'),
+                back: getAreaType(player.rows.back, 'tail'),
             });
         }
     }, [player]);

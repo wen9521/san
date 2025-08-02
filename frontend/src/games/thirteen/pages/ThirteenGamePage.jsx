@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Typography, Button, CircularProgress, Stack } from '@mui/material';
 import { useGame } from '../context/GameContext';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import ThirteenPlayerStatus from '../components/ThirteenPlayerStatus';
 import { ThirteenGameRow } from '../components/ThirteenGameRow';
 import { getAreaType } from '../utils/thirteenLogic';
 import PointsDialog from '../components/PointsDialog';
 
 function ThirteenGamePage() {
-    const { players, startGame, setPlayerArrangement, autoArrangePlayerHand } = useGame();
+    const { players, startGame, setPlayerArrangement, autoArrangePlayerHand, startComparison } = useGame(); // 获取 startComparison
     const navigate = useNavigate();
     const player = players.find(p => p.id === 'player');
     const myId = 'player';
@@ -17,7 +17,6 @@ function ThirteenGamePage() {
 
     useEffect(() => {
         if (player && player.rows) {
-            // 【重要修正】: 确保传递给 getAreaType 的是 card ID 数组
             const getIds = (cards) => (Array.isArray(cards) ? cards.map(c => c.id) : []);
             setHandTypes({
                 front: getAreaType(getIds(player.rows.front), 'head'),
@@ -25,7 +24,7 @@ function ThirteenGamePage() {
                 back: getAreaType(getIds(player.rows.back), 'tail'),
             });
         }
-    }, [player, player?.rows]); // 依赖项更新
+    }, [player, player?.rows]);
 
     if (!player) {
         return <Box className="page-container-new-ui" sx={{justifyContent: 'center', alignItems: 'center'}}><CircularProgress /><Typography sx={{color: 'white', mt: 2}}>正在加载...</Typography></Box>;
@@ -41,18 +40,15 @@ function ThirteenGamePage() {
         if (selectedCardIds.length === 0 || !player) return;
         
         let newRows = JSON.parse(JSON.stringify(player.rows));
-        // 所有牌都在rows里，直接从rows里找
         const allCardsInRows = [...newRows.front, ...newRows.middle, ...newRows.back];
         
         const movedCards = allCardsInRows.filter(c => selectedCardIds.includes(c.id));
         if (movedCards.length === 0) return;
         
-        // 从所有道中移除这些牌
         newRows.front = newRows.front.filter(c => !selectedCardIds.includes(c.id));
         newRows.middle = newRows.middle.filter(c => !selectedCardIds.includes(c.id));
         newRows.back = newRows.back.filter(c => !selectedCardIds.includes(c.id));
 
-        // 添加到目标道
         newRows[targetRowId].push(...movedCards);
         
         setPlayerArrangement(myId, newRows);
@@ -63,6 +59,12 @@ function ThirteenGamePage() {
         if (!player) return;
         autoArrangePlayerHand();
         setSelectedCardIds([]);
+    };
+    
+    // 【修复】: 创建一个新的处理函数
+    const handleStartComparison = () => {
+        startComparison(); // 先调用 context 中的计算函数
+        navigate('/thirteen/comparison'); // 再进行页面跳转
     };
 
     const { rows } = player;
@@ -76,7 +78,7 @@ function ThirteenGamePage() {
                         label="头道"
                         cards={rows.front}
                         onCardClick={handleCardClick}
-                        onRowClick={() => handleRowClick('front')} // 传递正确的道ID
+                        onRowClick={() => handleRowClick('front')}
                         selectedCardIds={selectedCardIds}
                         typeName={handTypes.front}
                     />
@@ -103,7 +105,8 @@ function ThirteenGamePage() {
                     <Button variant="contained" color="secondary" onClick={handleAutoArrange} sx={{ mb: 1 }}>
                         智能分牌
                     </Button>
-                    <Button variant="contained" color="primary" component={Link} to="/thirteen/comparison" sx={{ mb: 1 }}>
+                    {/* 【修复】: 修改按钮，移除 component 和 to 属性，使用 onClick */}
+                    <Button variant="contained" color="primary" onClick={handleStartComparison} sx={{ mb: 1 }}>
                         开始比牌
                     </Button>
                     <Button variant="contained" color="success" onClick={() => startGame(players.length)} sx={{ mb: 1 }}>

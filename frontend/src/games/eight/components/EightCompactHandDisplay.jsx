@@ -2,68 +2,68 @@
 import React from 'react';
 import { Box, Typography, Paper, Stack } from '@mui/material';
 import { EightPokerCard } from './EightPokerCard';
-import { getHandTypeName, evaluateEightGameHand } from '../utils/eightLogic';
 
 const CompactCardRow = ({ cards }) => {
-    if (!cards || cards.length === 0) return <Box sx={{ height: '42px' }} />;
+    if (!cards || cards.length === 0) return <Box sx={{ minHeight: '80px' }} />; // Set a min-height
+
+    const overlap = 0.6; // 60% overlap
 
     return (
-        <Box sx={{ display: 'flex', position: 'relative', width: `${cards.length * 15 + 25}px`, height: '42px', margin: 'auto' }}>
+        <Box sx={{ 
+            display: 'flex', 
+            justifyContent: 'center',
+            alignItems: 'center',
+            height: '100%',
+            position: 'relative',
+        }}>
             {cards.map((card, index) => (
                 <Box
                     key={card.id}
                     sx={{
-                        position: 'absolute',
-                        left: `${index * 15}px`,
-                        zIndex: index
+                        position: index === 0 ? 'relative' : 'absolute',
+                        left: index === 0 ? '0' : `${index * (100 - overlap * 100) / (cards.length -1)}%`,
+                        width: '35%', // Relative width
+                        height: 'auto',
+                        zIndex: index,
+                        transition: 'transform 0.2s ease-in-out',
+                        '&:hover': {
+                            transform: 'scale(1.1) translateY(-5px)',
+                            zIndex: cards.length + 1,
+                        }
                     }}
                 >
-                    <EightPokerCard card={card} width={40} height={56} isSelectable={false} />
+                    <EightPokerCard card={card} isSelectable={false} />
                 </Box>
             ))}
         </Box>
     );
 };
 
-const EightCompactHandDisplay = ({ player, details }) => {
+const EightCompactHandDisplay = ({ player }) => {
     if (!player) return null;
-
-    const getPointColor = (points) => {
-        if (points > 0) return 'success.light';
-        if (points < 0) return 'error.light';
-        return 'text.secondary';
-    };
-    
-    const totalScore = details ? details.front.points + details.middle.points + details.back.points : 0;
     
     return (
-        <Paper elevation={3} sx={{ p: 1, backgroundColor: 'rgba(0, 0, 0, 0.3)', color: 'white', height: '100%' }}>
-            <Stack direction="row" justifyContent="space-between" alignItems="center">
-                <Typography variant="body1" sx={{ fontWeight: 'bold' }}>{player.name}</Typography>
-                <Typography variant="body1" sx={{ fontWeight: 'bold', color: getPointColor(totalScore) }}>
-                    {totalScore > 0 ? `+${totalScore}` : totalScore}
-                </Typography>
-            </Stack>
+        <Paper 
+            elevation={3} 
+            sx={{ 
+                p: 1, 
+                backgroundColor: 'rgba(0, 0, 0, 0.4)', 
+                color: 'white', 
+                width: '100%',
+                display: 'flex',
+                flexDirection: 'column'
+            }}
+        >
+            <Typography variant="h6" sx={{ fontWeight: 'bold', textAlign: 'center', mb: 1 }}>
+                {player.name}
+            </Typography>
             
-            <Stack sx={{ mt: 1 }} spacing={0.5}>
-                {/* Corrected the display order to be front, middle, back from top to bottom */}
-                {['front', 'middle', 'back'].map(area => {
-                    const handEval = details ? evaluateEightGameHand(player.rows[area]) : null;
-                    const areaPoints = details ? details[area].points : 0;
-                    return (
-                        <Box key={area} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                            <Box sx={{flex: 1}}>
-                                <CompactCardRow cards={player.rows[area]} />
-                            </Box>
-                            <Typography sx={{ fontSize: '0.7rem', color: 'lightgray', minWidth: '45px', textAlign: 'center' }}>
-                                {getHandTypeName(handEval)}
-                            </Typography>
-                            <Typography sx={{ fontSize: '0.8rem', fontWeight: 'bold', color: getPointColor(areaPoints), minWidth: '30px', textAlign: 'right' }}>
-                                {areaPoints > 0 ? `+${areaPoints}` : areaPoints}
-                            </Typography>
-                        </Box>
-                    );
-                })}
+            <Stack sx={{ flexGrow: 1, height: '100%', justifyContent: 'space-around' }} spacing={1}>
+                {['front', 'middle', 'back'].map(area => (
+                    <Box key={area} sx={{ height: '30%', width: '100%'}}>
+                        <CompactCardRow cards={player.rows[area]} />
+                    </Box>
+                ))}
             </Stack>
         </Paper>
     );

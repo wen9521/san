@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box } from '@mui/material';
+import { Box, Stack } from '@mui/material';
 import { ThirteenPokerCard } from './ThirteenPokerCard';
 
 const ThirteenCompactHandDisplay = ({ hand, cardWidth = 60, cardHeight = 84 }) => {
@@ -7,20 +7,20 @@ const ThirteenCompactHandDisplay = ({ hand, cardWidth = 60, cardHeight = 84 }) =
         return <Box sx={{ height: `${cardHeight}px`, m: 0.5 }} />;
     }
 
-    const overlap = cardWidth * 0.6; // 60% overlap
-    const containerWidth = cardWidth + (hand.length - 1) * (cardWidth - overlap);
+    const overlap = cardWidth * 0.7; // 70% overlap
+    const cardSpacing = cardWidth * (1 - 0.7); // 30% of card width for spacing
 
     return (
-        <Box sx={{ 
-            display: 'flex', 
-            justifyContent: 'center', 
-            alignItems: 'center', 
-            my: 0.5, 
-            minHeight: `${cardHeight}px` 
+        <Box sx={{
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            my: 0.5,
+            minHeight: `${cardHeight}px`
         }}>
-            <Box sx={{ position: 'relative', width: `${containerWidth}px`, height: `${cardHeight}px` }}>
+            <Stack direction="row" spacing={`${-overlap}px`} sx={{ height: `${cardHeight}px` }}>
                 {hand.map((card, index) => (
-                    <Box
+                     <Box
                         key={card.id}
                         sx={{
                             position: 'absolute',
@@ -35,7 +35,7 @@ const ThirteenCompactHandDisplay = ({ hand, cardWidth = 60, cardHeight = 84 }) =
                         />
                     </Box>
                 ))}
-            </Box>
+            </Stack>
         </Box>
     );
 };

@@ -18,7 +18,6 @@ export const useEightGame = () => {
     return context;
 };
 
-// ... (Helper functions like dealCardsForEightGame, SUIT_NAMES, RANK_NAMES remain the same) ...
 const SUIT_NAMES = { S: 'spades', H: 'hearts', C: 'clubs', D: 'diamonds' };
 const RANK_NAMES = {
     'A': 'ace', 'K': 'king', 'Q': 'queen', 'J': 'jack',
@@ -80,8 +79,9 @@ export const EightGameProvider = ({ children }) => {
 
         const playerList = ids.map((id, idx) => {
             const hand = sortEightGameCardsByRank(hands[idx]);
-             const initialRows = (id === 'player') 
-                ? { front: [], middle: [], back: hand } 
+            // Correctly initialize rows: Player's cards go to middle, AI's are empty initially.
+            const initialRows = (id === 'player') 
+                ? { front: [], middle: hand, back: [] } 
                 : { front: [], middle: [], back: [] };
             return { id, name: playerNames[idx], hand, rows: initialRows, isReady: false };
         });
@@ -139,7 +139,7 @@ export const EightGameProvider = ({ children }) => {
             matchupScores, 
             players, 
             specialWinner: player, 
-            details: null, // No details for special hands
+            details: null,
             handInfo: handInfo
         });
         setSpecialHand(null);
@@ -188,7 +188,6 @@ export const EightGameProvider = ({ children }) => {
             }
         }
 
-        // --- 新增：计算玩家与每个AI的单挑得分 ---
         const matchupScores = {};
         const humanPlayer = finalPlayers.find(p => p.id === 'player');
         let humanPlayerTotalScore = 0;
@@ -196,11 +195,10 @@ export const EightGameProvider = ({ children }) => {
         finalPlayers.forEach(opponent => {
             if (opponent.id === 'player') return;
             const result = calculateEightGameTotalScore(humanPlayer.rows, opponent.rows);
-            matchupScores[opponent.id] = result.playerBScore; // AI的分数
+            matchupScores[opponent.id] = result.playerBScore;
             humanPlayerTotalScore += result.playerAScore;
         });
         matchupScores['player'] = humanPlayerTotalScore;
-        // --- 计算结束 ---
 
         setComparisonResult({ matchupScores, players: finalPlayers, details });
     };

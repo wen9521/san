@@ -60,12 +60,29 @@ export const EightGameProvider = ({ children }) => {
 
         const playerList = ids.slice(0, numPlayers).map((id, idx) => {
             const hand = sortEightGameCardsByRank(hands[idx]);
-            // 【重要修正】: 根据用户要求，玩家的牌直接放入中道
+            const player = {
+                id,
+                name: playerNames[idx],
+                hand,
+                rows: { front: [], middle: [], back: [] },
+                isReady: false
+            };
+
             if (id === 'player') {
-                return { id, name: playerNames[idx], hand: [], rows: { front: [], middle: hand, back: [] }, isReady: false };
+                player.rows.middle = hand;
+                player.hand = [];
+            } else { // AI player
+                const handIds = player.hand.map(c => c.id);
+                const bestRowsIds = getAIEightGameBestArrangement(handIds);
+                player.rows = {
+                    front: bestRowsIds.front.map(cardId => player.hand.find(card => card.id === cardId)),
+                    middle: bestRowsIds.middle.map(cardId => player.hand.find(card => card.id === cardId)),
+                    back: bestRowsIds.back.map(cardId => player.hand.find(card => card.id === cardId)),
+                };
+                player.hand = [];
+                player.isReady = true;
             }
-            // AI 的牌先放入手牌，再由逻辑自动分配
-            return { id, name: playerNames[idx], hand, rows: { front: [], middle: [], back: [] }, isReady: false };
+            return player;
         });
 
         setPlayers(playerList);
@@ -80,19 +97,6 @@ export const EightGameProvider = ({ children }) => {
                 setSpecialHand({ player, handInfo: detectedSpecialHand });
             }
         }
-
-        playerList.forEach(p => {
-            if (p.id.startsWith('ai')) {
-                const handIds = p.hand.map(c => c.id);
-                const bestRowsIds = getAIEightGameBestArrangement(handIds);
-                const bestRowsWithObjects = {
-                    front: bestRowsIds.front.map(id => p.hand.find(card => card.id === id)),
-                    middle: bestRowsIds.middle.map(id => p.hand.find(card => card.id === id)),
-                    back: bestRowsIds.back.map(id => p.hand.find(card => card.id === id)),
-                };
-                setPlayers(prev => prev.map(pl => pl.id === p.id ? { ...pl, rows: bestRowsWithObjects, hand: [], isReady: true } : pl));
-            }
-        });
     }, []);
 
     useEffect(() => { startGame(); }, [startGame]);

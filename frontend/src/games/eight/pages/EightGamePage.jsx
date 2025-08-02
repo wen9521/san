@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Button, CircularProgress, Typography, Stack, Paper } from '@mui/material';
+import { Box, Button, CircularProgress, Typography, Stack } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { useEightGame } from '../context/EightGameContext';
 import EightPlayerStatus from '../components/EightPlayerStatus';
 import { EightGameRow } from '../components/EightGameRow';
-import EightHandDisplay from '../components/EightHandDisplay'; // 确保导入
 import EightSpecialHandBanner from '../components/EightSpecialHandBanner';
 import EightComparisonDisplay from '../components/EightComparisonDisplay';
 
@@ -51,25 +50,21 @@ function EightGamePage() {
 
         const newRows = JSON.parse(JSON.stringify(player.rows));
         
-        // 【重要修正】: 同时从手牌(hand)和牌道(rows)中查找要移动的牌
-        const allPlayerCards = [...player.hand, ...newRows.front, ...newRows.middle, ...newRows.back];
-        const cardsToMove = allPlayerCards.filter(c => selectedCardIds.includes(c.id));
+        // 【重要修正】: 只在牌道(rows)中查找和移动牌
+        const allCardsInRows = [...newRows.front, ...newRows.middle, ...newRows.back];
+        const cardsToMove = allCardsInRows.filter(c => selectedCardIds.includes(c.id));
 
         if (cardsToMove.length === 0) return;
 
-        // 【重要修正】: 当牌从手牌移入牌道时，也需要更新手牌
-        const newHand = player.hand.filter(c => !selectedCardIds.includes(c.id));
+        // 从所有道中移除这些牌
         newRows.front = newRows.front.filter(c => !selectedCardIds.includes(c.id));
         newRows.middle = newRows.middle.filter(c => !selectedCardIds.includes(c.id));
         newRows.back = newRows.back.filter(c => !selectedCardIds.includes(c.id));
 
+        // 添加到目标道
         newRows[targetRowId].push(...cardsToMove);
         
-        // 【重要修正】: 同时更新手牌和牌道
-        const playerWithUpdatedHand = { ...player, hand: newHand };
-        setPlayers(players.map(p => p.id === myId ? playerWithUpdatedHand : p));
         setPlayerArrangement(myId, newRows);
-        
         setSelectedCardIds([]);
     };
     
@@ -78,8 +73,7 @@ function EightGamePage() {
     
     const createRowClickHandler = (rowId) => () => handleRowClick(rowId);
 
-    // 【重要修正】: 同时解构 hand 和 rows
-    const { rows, hand } = player;
+    const { rows } = player;
 
     return (
         <Box className="page-container-new-ui" sx={{ position: 'relative' }}>
@@ -98,15 +92,7 @@ function EightGamePage() {
                     <EightGameRow id="back" label="尾道(3张)" cards={rows.back} onCardClick={handleCardClick} onRowClick={createRowClickHandler('back')} selectedCardIds={selectedCardIds} />
                 </Stack>
                 
-                {/* 【重要修正】: 添加手牌显示区域 */}
-                <Paper elevation={3} sx={{ p: 1, m: 1, bgcolor: 'rgba(0,0,0,0.2)' }}>
-                    <Typography variant="subtitle1" sx={{ color: 'white', textAlign: 'center', mb: 1 }}>你的手牌</Typography>
-                    <EightHandDisplay 
-                        hand={hand} 
-                        onCardClick={handleCardClick} 
-                        selectedCardIds={selectedCardIds}
-                    />
-                </Paper>
+                {/* 【重要修正】: 移除手牌显示区域 */}
 
                 <Stack direction="row" spacing={1} justifyContent="center" sx={{ p: 1, flexWrap: 'wrap' }}>
                     <Button variant="contained" color="secondary" onClick={autoArrangePlayerHand}>智能分牌</Button>

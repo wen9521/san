@@ -33,14 +33,25 @@ const dealCards = () => {
 export const GameProvider = ({ children }) => {
     const [players, setPlayers] = useState([]);
     const [isGameActive, setIsGameActive] = useState(false);
-    const [comparisonResult, setComparisonResult] = useState(null); // 新增状态
+    const [comparisonResult, setComparisonResult] = useState(null);
 
     const startGame = useCallback(() => {
-        setComparisonResult(null); // 开始新游戏时清空结果
+        setComparisonResult(null);
         const [playerHandRaw, aiHand1Raw, aiHand2Raw, aiHand3Raw] = dealCards();
         
+        // Correctly split the player's hand into 3-5-5 stacks from the start.
         const initialPlayers = [
-            { id: 'player', name: '你', hand: sortCards(playerHandRaw), rows: { front: [], middle: [], back: playerHandRaw }, isReady: false },
+            { 
+                id: 'player', 
+                name: '你', 
+                hand: sortCards(playerHandRaw),
+                rows: { 
+                    front: playerHandRaw.slice(0, 3), 
+                    middle: playerHandRaw.slice(3, 8), 
+                    back: playerHandRaw.slice(8, 13) 
+                }, 
+                isReady: false 
+            },
             { id: 'ai1', name: '电脑1', hand: sortCards(aiHand1Raw), rows: { front: [], middle: [], back: [] }, isReady: false },
             { id: 'ai2', name: '电脑2', hand: sortCards(aiHand2Raw), rows: { front: [], middle: [], back: [] }, isReady: false },
             { id: 'ai3', name: '电脑3', hand: sortCards(aiHand3Raw), rows: { front: [], middle: [], back: [] }, isReady: false }
@@ -63,7 +74,7 @@ export const GameProvider = ({ children }) => {
                         }
                         return prev;
                     });
-                }, (index + 1) * 1000); // AI理牌速度加快
+                }, (index + 1) * 1000);
             });
         }
     }, [isGameActive]);
@@ -86,7 +97,6 @@ export const GameProvider = ({ children }) => {
         });
     };
 
-    // 新增比牌函数
     const startComparison = () => {
         const player = players.find(p => p.id === 'player');
         if (!player.isReady) {
@@ -111,7 +121,7 @@ export const GameProvider = ({ children }) => {
 
         aiPlayers.forEach(opponent => {
             const result = calculateTotalScore(humanPlayer, opponent);
-            matchupScores[opponent.id] = result.totalScoreB; // AI分数
+            matchupScores[opponent.id] = result.totalScoreB;
             humanPlayerTotalScore += result.totalScoreA;
             details[humanPlayer.id][opponent.id] = result.details;
             details[opponent.id][humanPlayer.id] = result.details.map(d => ({...d, points: -d.points}));

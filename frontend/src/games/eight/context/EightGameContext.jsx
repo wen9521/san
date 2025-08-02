@@ -5,7 +5,9 @@ import {
     sortEightGameCardsByRank, 
     evaluateEightGameHand,
     checkForEightGameSpecialHand,
-    calculateEightGameTotalScore
+    calculateEightGameTotalScore, // Keep this for now, might need it
+    compareEightGameHands,
+    EIGHT_GAME_HAND_TYPES // Import for new logic
 } from '../utils/eightLogic';
 
 const EightGameContext = createContext();
@@ -42,11 +44,35 @@ const dealCardsForEightGame = () => {
     return hands;
 };
 
+// Extracted from eightLogic.js to be used here, to avoid circular dependencies if needed later
+const getHandScore = (winningHand, area) => {
+    const type = winningHand.type;
+
+    if (area === 'front') {
+        if (type === EIGHT_GAME_HAND_TYPES.PAIR) {
+            return winningHand.highCards[0] + 2;
+        }
+        return 1;
+    }
+    if (area === 'middle') {
+        if (type === EIGHT_GAME_HAND_TYPES.STRAIGHT_FLUSH) return 10;
+        if (type === EIGHT_GAME_HAND_TYPES.THREE_OF_A_KIND) return 6;
+        return 1;
+    }
+    if (area === 'back') {
+        if (type === EIGHT_GAME_HAND_TYPES.STRAIGHT_FLUSH) return 5;
+        if (type === EIGHT_GAME_HAND_TYPES.THREE_OF_A_KIND) return 3;
+        return 1;
+    }
+    return 1;
+};
+
+
 export const EightGameProvider = ({ children }) => {
     const [players, setPlayers] = useState([]);
     const [isGameActive, setIsGameActive] = useState(false);
     const [comparisonResult, setComparisonResult] = useState(null);
-    const [specialHand, setSpecialHand] = useState(null); // { player, handInfo }
+    const [specialHand, setSpecialHand] = useState(null);
 
     const aiArrangementStarted = useRef(false);
 
@@ -70,7 +96,6 @@ export const EightGameProvider = ({ children }) => {
         setPlayers(playerList);
         setIsGameActive(true);
 
-        // 检测玩家的特殊牌型
         const player = playerList.find(p => p.id === 'player');
         const detectedSpecialHand = checkForEightGameSpecialHand(player.hand);
         if (detectedSpecialHand) {
@@ -78,9 +103,7 @@ export const EightGameProvider = ({ children }) => {
         }
     }, []);
 
-    useEffect(() => {
-        startGame();
-    }, [startGame]);
+    useEffect(() => { startGame(); }, [startGame]);
 
     useEffect(() => {
         if (isGameActive && players.length > 0 && !aiArrangementStarted.current && !specialHand) {
@@ -90,9 +113,7 @@ export const EightGameProvider = ({ children }) => {
                 aiPlayers.forEach(aiPlayer => {
                     setTimeout(() => {
                         const bestRows = getAIEightGameBestArrangement(aiPlayer.hand);
-                        setPlayers(prev => prev.map(p => 
-                            p.id === aiPlayer.id ? { ...p, rows: bestRows, isReady: true } : p
-                        ));
+                        setPlayers(prev => prev.map(p => p.id === aiPlayer.id ? { ...p, rows: bestRows, isReady: true } : p));
                     }, 50);
                 });
             }
@@ -100,11 +121,7 @@ export const EightGameProvider = ({ children }) => {
     }, [isGameActive, players, specialHand]);
 
     const setPlayerArrangement = (playerId, newRows) => {
-        setPlayers(prevPlayers =>
-            prevPlayers.map(p =>
-                p.id === playerId ? { ...p, rows: newRows, isReady: false } : p
-            )
-        );
+        setPlayers(prevPlayers => prevPlayers.map(p => p.id === playerId ? { ...p, rows: newRows, isReady: false } : p));
     };
 
     const autoArrangePlayerHand = () => {
@@ -116,52 +133,80 @@ export const EightGameProvider = ({ children }) => {
 
     const confirmSpecialHand = () => {
         if (!specialHand) return;
-        
         const { player, handInfo } = specialHand;
-        
-        const scores = players.map(p => {
-            let totalScore = 0;
-            if (p.id === player.id) {
-                totalScore = handInfo.score * (players.length -1);
-            } else {
-                totalScore = -handInfo.score;
-            }
-            return { playerId: p.id, name: p.name, totalScore };
-        });
-
-        setComparisonResult({ scores, players });
-        setSpecialHand(null); // 清空特殊牌局，以防重复计算
+        const scores = players.map(p => ({
+            playerId: p.id,
+            name: p.name,
+            totalScore: p.id === player.id ? handInfo.score * (players.length - 1) : -handInfo.score
+        }));
+        setComparisonResult({ scores, players, specialWinner: player });
+        setSpecialHand(null);
     };
 
     const startComparison = () => {
-        let finalPlayers = players.map(p => {
-            if (p.id === 'player' && !p.isReady) {
-                const { isValid, message } = validateEightGameArrangement(p.rows);
-                if (!isValid) {
-                    alert(`你的牌型不合法: ${message}`);
-                    return null;
-                }
-                return { ...p, isReady: true };
+        const player = players.find(p => p.id === 'player');
+        if (player && !player.isReady) {
+            const { isValid, message } = validateEightGameArrangement(player.rows);
+            if (!isValid) {
+                alert(`你的牌型不合法: ${message} (头道必须小于中道，中道必须小于尾道)`);
+                return;
             }
-            return p;
-        });
-
-        if(finalPlayers.includes(null)) return { success: false, message: "牌型不合法" };
-
-        if (!finalPlayers.every(p => p.isReady)) {
-            return { success: false, message: "有玩家尚未准备好。" };
         }
+        
+        const finalPlayers = players.map(p => ({ ...p, isReady: true }));
+        setPlayers(finalPlayers);
+
+        const evaluatedPlayers = finalPlayers.map(p => ({
+            ...p,
+            evaluatedRows: {
+                front: evaluateEightGameHand(p.rows.front),
+                middle: evaluateEightGameHand(p.rows.middle),
+                back: evaluateEightGameHand(p.rows.back)
+            }
+        }));
 
         let scores = finalPlayers.map(p => ({ playerId: p.id, name: p.name, totalScore: 0 }));
-        for (let i = 0; i < finalPlayers.length; i++) {
-            for (let j = i + 1; j < finalPlayers.length; j++) {
-                const result = calculateEightGameTotalScore(finalPlayers[i].rows, finalPlayers[j].rows);
-                scores[i].totalScore += result.playerAScore;
-                scores[j].totalScore += result.playerBScore;
+        let details = {};
+        finalPlayers.forEach(p => {
+            details[p.id] = {
+                front: { handEval: evaluatedPlayers.find(ep => ep.id === p.id).evaluatedRows.front, points: 0 },
+                middle: { handEval: evaluatedPlayers.find(ep => ep.id === p.id).evaluatedRows.middle, points: 0 },
+                back: { handEval: evaluatedPlayers.find(ep => ep.id === p.id).evaluatedRows.back, points: 0 },
+            };
+        });
+
+        for (let i = 0; i < evaluatedPlayers.length; i++) {
+            for (let j = i + 1; j < evaluatedPlayers.length; j++) {
+                const playerA = evaluatedPlayers[i];
+                const playerB = evaluatedPlayers[j];
+
+                ['front', 'middle', 'back'].forEach(area => {
+                    const handA = playerA.evaluatedRows[area];
+                    const handB = playerB.evaluatedRows[area];
+                    const comparison = compareEightGameHands(handA, handB);
+                    
+                    if (comparison !== 0) {
+                        const winnerHand = comparison > 0 ? handA : handB;
+                        const areaScore = getHandScore(winnerHand, area);
+                        
+                        if (comparison > 0) { // A wins
+                            details[playerA.id][area].points += areaScore;
+                            details[playerB.id][area].points -= areaScore;
+                        } else { // B wins
+                            details[playerB.id][area].points += areaScore;
+                            details[playerA.id][area].points -= areaScore;
+                        }
+                    }
+                });
             }
         }
-        setComparisonResult({ scores, players: finalPlayers });
-        return { success: true, results: { scores, players: finalPlayers } };
+
+        scores.forEach(score => {
+            const playerDetails = details[score.playerId];
+            score.totalScore = playerDetails.front.points + playerDetails.middle.points + playerDetails.back.points;
+        });
+
+        setComparisonResult({ scores, players: finalPlayers, details });
     };
 
     const value = {

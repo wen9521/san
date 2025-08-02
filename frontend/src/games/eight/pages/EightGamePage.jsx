@@ -3,8 +3,9 @@ import { Box, Button, CircularProgress, Typography, Stack, Grid } from '@mui/mat
 import { useEightGame } from '../context/EightGameContext';
 import EightPlayerStatus from '../components/EightPlayerStatus';
 import { EightGameRow } from '../components/EightGameRow';
-import EightSpecialHandDialog from '../components/EightSpecialHandDialog'; // 引入组件
+import EightSpecialHandDialog from '../components/EightSpecialHandDialog';
 import EightCompactHandDisplay from '../components/EightCompactHandDisplay';
+import EightComparisonDisplay from '../components/EightComparisonDisplay'; // 引入新的比牌组件
 
 function EightGamePage() {
     const {
@@ -14,8 +15,8 @@ function EightGamePage() {
         autoArrangePlayerHand,
         startComparison,
         comparisonResult,
-        specialHand,       // 新增：获取特殊牌局信息
-        confirmSpecialHand // 新增：确认特殊牌局的方法
+        specialHand,
+        confirmSpecialHand
     } = useEightGame();
     
     const player = players.find(p => p.id === 'player');
@@ -23,20 +24,20 @@ function EightGamePage() {
     const [selectedCardIds, setSelectedCardIds] = useState([]);
     const [isSpecialHandDialogOpen, setIsSpecialHandDialogOpen] = useState(true);
 
+    // 当 context 中的 specialHand 变化时，重置对话框的打开状态
+    React.useEffect(() => {
+        if (specialHand) {
+            setIsSpecialHandDialogOpen(true);
+        }
+    }, [specialHand]);
+
     if (!player) {
         return <Box className="page-container-new-ui" sx={{ justifyContent: 'center', alignItems: 'center' }}><CircularProgress /><Typography sx={{ color: 'white', mt: 2 }}>正在创建八张牌局...</Typography></Box>;
     }
     
+    // 使用新的比牌组件
     if (comparisonResult) {
-        return (
-            <Box className="page-container-new-ui" sx={{ justifyContent: 'center', alignItems: 'center', color: 'white' }}>
-                <Typography variant="h4">比牌结果</Typography>
-                {comparisonResult.scores.map(score => (
-                    <Typography key={score.playerId}>{score.name}: {score.totalScore}分</Typography>
-                ))}
-                <Button variant="contained" onClick={startGame} sx={{ mt: 2 }}>再来一局</Button>
-            </Box>
-        );
+        return <EightComparisonDisplay result={comparisonResult} onRestart={startGame} />;
     }
 
     const handleCardClick = (cardId) => {
@@ -49,13 +50,25 @@ function EightGamePage() {
         if (selectedCardIds.length === 0 || !player) return;
 
         let newRows = JSON.parse(JSON.stringify(player.rows));
-        // 从所有墩中移除选中的牌
+        const cardsToMove = [];
+        
+        // 从所有墩和手牌中找到选中的牌
+        Object.keys(newRows).forEach(rowKey => {
+            newRows[rowKey].forEach(c => {
+                 if(selectedCardIds.includes(c.id)) cardsToMove.push(c);
+            });
+        });
+        player.hand.forEach(c => {
+             if(selectedCardIds.includes(c.id) && !cardsToMove.find(mc => mc.id === c.id)) cardsToMove.push(c);
+        })
+
+
+        // 从所有墩中移除
         Object.keys(newRows).forEach(rowKey => {
             newRows[rowKey] = newRows[rowKey].filter(c => !selectedCardIds.includes(c.id));
         });
 
         // 添加到目标墩
-        const cardsToMove = player.hand.filter(c => selectedCardIds.includes(c.id));
         newRows[targetRowId].push(...cardsToMove);
         
         setPlayerArrangement(myId, newRows);

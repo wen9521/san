@@ -33,3 +33,84 @@ body {
     border: 1px solid rgba(255, 255, 255, 0.2);
     padding: 24px;
 }
+
+/* 扑克牌基础样式 */
+.poker-card {
+  width: 90px;
+  height: 126px;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+  transition: all 0.2s ease-in-out;
+  cursor: grab;
+}
+.poker-card img {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* 新的全屏容器 - 占满屏幕 */
+.page-container-new-ui {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  padding: 0; /* 移除内边距，确保全屏 */
+  box-sizing: border-box;
+}
+
+/* 毛玻璃效果的游戏板 - 移除最大宽度限制 */
+.game-board.glass-effect {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  gap: 1rem;
+  padding: 1rem;
+  box-sizing: border-box;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 0; /* 移除圆角，使其与屏幕边缘对齐 */
+  box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+  /* 移除了 max-width: 500px; */
+}
+
+/* 卡片选中效果 */
+.card-in-row.selected {
+  transform: translateY(-10px) scale(1.05);
+  box-shadow: 0 0 15px 5px rgba(255, 255, 0, 0.7);
+  z-index: 10;
+}
+
+/* 手牌展示容器，实现卡片平铺和重叠效果 */
+.hand-display {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 10px;
+  position: relative;
+  min-height: 146px; /* 126px card height + 20px padding */
+}
+
+.hand-display .poker-card {
+  margin-left: -50px; /* 控制卡片重叠 */
+  transition: transform 0.2s ease-in-out, margin 0.2s ease-in-out;
+}
+
+/* 第一张牌没有左边距 */
+.hand-display .poker-card:first-child {
+  margin-left: 0;
+}
+
+/* 鼠标悬停时，当前牌和右侧所有牌向右移动，以“展开”手牌 */
+.hand-display:hover .poker-card:hover {
+  transform: translateY(-20px) scale(1.05);
+  margin-right: 25px; /* 为右侧牌腾出空间 */
+}
+
+.hand-display:hover .poker-card:hover ~ .poker-card {
+  transform: translateX(25px); /* 移动右侧的牌 */
+}

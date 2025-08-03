@@ -1,5 +1,5 @@
-import { getRankValue } from '../../../core/poker';
-import { createDeck, shuffleDeck } from '../../../core/deck';
+
+import { createDeck, shuffleDeck, getRankValue } from '../../../core/deck';
 
 // --- Game-Specific Constants ---
 export const HAND_TYPES = {
@@ -96,7 +96,7 @@ export const validateArrangement = (rows) => {
 };
 
 // A simplified AI arrangement logic. A real one is much more complex.
-export const findBestArrangement = (fullHand) => {
+export const findBestCombination = (fullHand) => {
     // This is a placeholder. A real implementation is highly complex.
     const sortedHand = fullHand.sort((a, b) => getRankValue(b.rank) - getRankValue(a.rank));
     return {
@@ -106,7 +106,7 @@ export const findBestArrangement = (fullHand) => {
     };
 };
 
-export const calculateScores = (players) => {
+export const calcSSSAllScores = (players) => {
     const scores = players.reduce((acc, p) => ({ ...acc, [p.id]: 0 }), {});
     
     // Placeholder - in a real game, you compare each player to every other player
@@ -136,4 +136,8 @@ export const calculateScores = (players) => {
 
 export const getHandTypeName = (hand) => {
     return getHandEvaluation(hand).type.name;
+};
+
+export const getAreaType = (cards, area) => {
+    return getHandEvaluation(cards).type.name;
 };

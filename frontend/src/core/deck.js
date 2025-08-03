@@ -32,3 +32,13 @@ export const shuffleDeck = (array) => {
     }
     return array;
 };
+
+/**
+ * Returns the numerical value of a card rank.
+ * @param {string} rank The rank of the card (e.g., 'A', 'K', '2').
+ * @returns {number} The numerical value of the rank.
+ */
+export const getRankValue = (rank) => {
+    const rankValues = { '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9, 'T': 10, 'J': 11, 'Q': 12, 'K': 13, 'A': 14 };
+    return rankValues[rank] || 0;
+};

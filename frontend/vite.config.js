@@ -1,18 +1,22 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
 
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
-  build: {
-    rollupOptions: {
-      external: [
-        // 忽略 Capacitor 和 Cordova 插件的打包
-        '@capacitor/core',
-        '@capacitor/splash-screen',
-        '@capacitor/status-bar',
-        '@capacitor-community/http' // 【核心修正】: 将 http 插件添加到这里
-      ]
-    }
-  }
-})
+  server: {
+    proxy: {
+      // Proxy all requests starting with /api to your PHP backend
+      '/api': {
+        // Your PHP backend is likely running on port 80 or 8000.
+        // We target http://localhost and rely on your backend to handle it.
+        target: 'http://localhost', 
+        changeOrigin: true, // This is crucial for virtual hosted sites
+        secure: false,      // Don't verify SSL certs
+        
+        // This function rewrites the request path from '/api/login.php' to '/login.php'
+        rewrite: (path) => path.replace(/^\/api/, ''),
+      },
+    },
+  },
+});

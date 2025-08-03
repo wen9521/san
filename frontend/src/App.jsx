@@ -1,17 +1,17 @@
 import React from 'react';
 import { Routes, Route } from 'react-router-dom';
 import HomePage from './pages/HomePage';
-// Game-specific layouts will be imported here later
+import ThirteenGamePage from './games/thirteen/pages/ThirteenGamePage';
+import ComparisonPage from './games/thirteen/pages/ComparisonPage';
+import EightGamePage from './games/eight/pages/EightGamePage';
 
 function App() {
   return (
     <Routes>
       <Route path="/" element={<HomePage />} />
-      {/* 
-        The routes for games will be added here, for example:
-        <Route path="/thirteen/*" element={<ThirteenGameLayout />} />
-        <Route path="/eight/*" element={<EightGameLayout />} />
-      */}
+      <Route path="/thirteen" element={<ThirteenGamePage />} />
+      <Route path="/thirteen/comparison" element={<ComparisonPage />} />
+      <Route path="/eight" element={<EightGamePage />} />
     </Routes>
   );
 }
